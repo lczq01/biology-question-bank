@@ -1,0 +1,70 @@
+### 健康检查
+GET http://localhost:3001/api/health
+
+### 用户注册 - 管理员
+POST http://localhost:3001/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "email": "admin@example.com",
+  "password": "admin123",
+  "role": "admin",
+  "profile": {
+    "firstName": "管理员",
+    "lastName": "系统"
+  }
+}
+
+### 用户注册 - 学生
+POST http://localhost:3001/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "student001",
+  "email": "student001@example.com",
+  "password": "student123",
+  "role": "student",
+  "profile": {
+    "firstName": "张",
+    "lastName": "三",
+    "grade": "高一",
+    "class": "1班"
+  }
+}
+
+### 用户登录
+POST http://localhost:3001/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+### 获取用户信息 (需要先登录获取token)
+GET http://localhost:3001/api/user/profile
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 更新用户信息
+PUT http://localhost:3001/api/user/profile
+Content-Type: application/json
+Authorization: Bearer YOUR_TOKEN_HERE
+
+{
+  "profile": {
+    "firstName": "管理员",
+    "lastName": "更新",
+    "avatar": "avatar.jpg"
+  }
+}
+
+### 修改密码
+PUT http://localhost:3001/api/user/password
+Content-Type: application/json
+Authorization: Bearer YOUR_TOKEN_HERE
+
+{
+  "currentPassword": "admin123",
+  "newPassword": "newpassword123"
+}
