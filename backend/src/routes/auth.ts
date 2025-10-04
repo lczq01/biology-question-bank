@@ -1,46 +1,103 @@
 import { Router } from 'express';
-import { register, login } from '../controllers/authController';
-import { 
-  validateRequired, 
-  validateEmail, 
-  validatePassword, 
-  validateUsername 
-} from '../middleware/validation';
+import { mockAuthService } from '../utils/mockAuth';
 
 const router = Router();
 
-/**
- * @route   POST /api/auth/register
- * @desc    用户注册
- * @access  Public
- * @body    { username, email, password, role, profile: { firstName, lastName, grade?, class? } }
- */
-router.post('/register', [
-  validateRequired(['username', 'email', 'password', 'role', 'profile']),
-  validateUsername,
-  validateEmail,
-  validatePassword,
-  (req, res, next) => {
-    // 验证profile字段
-    const { profile } = req.body;
-    if (!profile || !profile.firstName || !profile.lastName) {
-      return res.status(400).json({
+// 用户登录 - 使用模拟认证
+router.post('/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    
+    const result = await mockAuthService.login(username, password);
+
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        data: {
+          token: result.token,
+          user: result.user
+        }
+      });
+    } else {
+      res.status(401).json({
         success: false,
-        message: '姓名信息不能为空'
+        message: result.message
       });
     }
-    next();
+  } catch (error) {
+    console.error('登录错误:', error);
+    res.status(500).json({
+      success: false,
+      message: '登录失败'
+    });
   }
-], register);
+});
 
-/**
- * @route   POST /api/auth/login
- * @desc    用户登录
- * @access  Public
- * @body    { username, password }
- */
-router.post('/login', [
-  validateRequired(['username', 'password'])
-], login);
+// 用户注册 - 使用模拟认证
+router.post('/register', async (req, res) => {
+  try {
+    const { username, password, email, role } = req.body;
+
+    
+    const result = await mockAuthService.register({ username, password, email, role });
+
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        message: result.message
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: result.message
+      });
+    }
+  } catch (error) {
+    console.error('注册错误:', error);
+    res.status(500).json({
+      success: false,
+      message: '注册失败'
+    });
+  }
+});
+
+// 获取当前用户信息 - 使用模拟认证
+router.get('/me', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+
+    
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: '未提供认证令牌'
+      });
+    }
+
+    const result = await mockAuthService.verifyToken(token);
+
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        data: result.user
+      });
+    } else {
+      res.status(401).json({
+        success: false,
+        message: result.message
+      });
+    }
+  } catch (error) {
+    console.error('获取用户信息错误:', error);
+    res.status(401).json({
+      success: false,
+      message: '认证令牌无效'
+    });
+  }
+});
 
 export default router;

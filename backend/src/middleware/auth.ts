@@ -83,3 +83,15 @@ export const requireStudent = authorize(UserRole.STUDENT);
 
 // 管理员或学生权限中间件
 export const requireUser = authorize(UserRole.ADMIN, UserRole.STUDENT);
+
+// 默认认证中间件别名
+export const auth = authenticate;
+
+// 扩展的Request接口类型
+export interface AuthRequest extends Request {
+  user?: {
+    userId: string;
+    username: string;
+    role: UserRole;
+  };
+}

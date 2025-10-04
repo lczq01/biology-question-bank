@@ -1,0 +1,18 @@
+{
+  "name": "待删除的测试考试",
+  "description": "这个考试会话将被删除",
+  "paperId": "68e0b289861c9b54a63958da",
+  "startTime": "2025-11-15T10:00:00.000Z",
+  "endTime": "2025-11-15T12:00:00.000Z",
+  "duration": 120,
+  "settings": {
+    "allowReview": true,
+    "showScore": true,
+    "randomOrder": false,
+    "timeLimit": true,
+    "maxAttempts": 1,
+    "passingScore": 60,
+    "autoGrade": true,
+    "preventCheating": false
+  }
+}

@@ -1,178 +1,172 @@
-import mongoose, { Schema, Document } from 'mongoose';
-import { IQuestion, QuestionType, DifficultyLevel, QuestionStatus } from '../types/question.types';
+import mongoose, { Document, Schema } from 'mongoose';
 
-// 扩展Document接口
-export interface IQuestionDocument extends IQuestion, Document {}
+// 题目类型枚举
+export enum QuestionType {
+  SINGLE_CHOICE = 'single_choice',    // 单选题
+  MULTIPLE_CHOICE = 'multiple_choice', // 多选题
+  FILL_BLANK = 'fill_blank'           // 填空题
+}
 
-// 选项Schema
-const OptionSchema = new Schema({
-  id: {
-    type: String,
-    required: true
-  },
-  text: {
-    type: String,
-    required: [true, '选项内容不能为空'],
-    trim: true,
-    maxlength: [500, '选项内容最多500个字符']
-  },
-  isCorrect: {
-    type: Boolean,
-    required: true,
-    default: false
-  }
-}, { _id: false });
+// 难度等级枚举
+export enum DifficultyLevel {
+  EASY = 'easy',       // 简单
+  MEDIUM = 'medium',   // 中等
+  HARD = 'hard'        // 困难
+}
 
-// 题目Schema定义
-const QuestionSchema = new Schema<IQuestionDocument>({
+// 选项接口
+export interface Option {
+  id: string;
+  text: string;
+  isCorrect: boolean;
+}
+
+// 题目接口
+export interface IQuestion extends Document {
+  title: string;
+  content: string;
+  type: QuestionType;
+  difficulty: DifficultyLevel;
+  subject: string;
+  chapter: string;
+  section?: string;
+  keywords: string[];
+  options?: Option[];
+  correctAnswer?: string;
+  explanation?: string;
+  points: number;
+  imageUrl?: string;
+  createdBy: mongoose.Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+  isActive: boolean;
+  usageCount: number;
+}
+
+// 题目Schema
+const QuestionSchema: Schema = new Schema({
   title: {
     type: String,
     required: [true, '题目标题不能为空'],
     trim: true,
-    maxlength: [200, '题目标题最多200个字符']
+    maxlength: [200, '题目标题不能超过200个字符']
   },
-  
   content: {
     type: String,
     required: [true, '题目内容不能为空'],
     trim: true,
-    maxlength: [2000, '题目内容最多2000个字符']
+    maxlength: [2000, '题目内容不能超过2000个字符']
   },
-  
   type: {
     type: String,
     enum: Object.values(QuestionType),
     required: [true, '题目类型不能为空']
   },
-  
   difficulty: {
     type: String,
     enum: Object.values(DifficultyLevel),
     required: [true, '难度等级不能为空']
   },
-  
-  status: {
+  subject: {
     type: String,
-    enum: Object.values(QuestionStatus),
-    default: QuestionStatus.DRAFT,
-    required: true
+    required: [true, '学科不能为空'],
+    default: '生物'
   },
-  
-  knowledgePoints: [{
+  chapter: {
     type: String,
-    trim: true,
-    maxlength: [50, '知识点名称最多50个字符']
-  }],
-  
-  options: {
-    type: [OptionSchema],
-    validate: {
-      validator: function(this: IQuestionDocument, options: any[]) {
-        // 选择题和判断题必须有选项
-        if ([QuestionType.SINGLE_CHOICE, QuestionType.MULTIPLE_CHOICE, QuestionType.TRUE_FALSE].includes(this.type)) {
-          return options && options.length > 0;
-        }
-        return true;
-      },
-      message: '选择题和判断题必须设置选项'
-    }
+    required: [true, '章节不能为空'],
+    trim: true
   },
-  
-  correctAnswer: {
-    type: Schema.Types.Mixed,
-    required: [true, '正确答案不能为空'],
-    validate: {
-      validator: function(this: IQuestionDocument, answer: any) {
-        // 多选题答案必须是数组
-        if (this.type === QuestionType.MULTIPLE_CHOICE) {
-          return Array.isArray(answer) && answer.length > 0;
-        }
-        // 其他题型答案必须是字符串
-        return typeof answer === 'string' && answer.trim().length > 0;
-      },
-      message: '答案格式不正确'
-    }
-  },
-  
-  explanation: {
+  section: {
     type: String,
-    trim: true,
-    maxlength: [1000, '解析最多1000个字符']
+    trim: true
   },
-  
-  images: [{
+  keywords: [{
     type: String,
     trim: true
   }],
-  
+  options: [{
+    id: {
+      type: String,
+      required: true
+    },
+    text: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    isCorrect: {
+      type: Boolean,
+      required: true,
+      default: false
+    }
+  }],
+  correctAnswer: {
+    type: String,
+    trim: true
+  },
+  explanation: {
+    type: String,
+    trim: true,
+    maxlength: [1000, '答案解析不能超过1000个字符']
+  },
   points: {
     type: Number,
     required: [true, '分值不能为空'],
-    min: [1, '分值至少为1'],
-    max: [100, '分值最多为100']
+    min: [1, '分值不能小于1'],
+    max: [100, '分值不能大于100'],
+    default: 5
   },
-  
+  imageUrl: {
+    type: String,
+    trim: true
+  },
   createdBy: {
-    type: Schema.Types.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: [true, '创建者不能为空']
   },
-  
-  stats: {
-    totalAttempts: {
-      type: Number,
-      default: 0,
-      min: 0
-    },
-    correctAttempts: {
-      type: Number,
-      default: 0,
-      min: 0
-    },
-    averageScore: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 100
-    }
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  usageCount: {
+    type: Number,
+    default: 0,
+    min: 0
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
-// 创建索引
-QuestionSchema.index({ type: 1 });
-QuestionSchema.index({ difficulty: 1 });
-QuestionSchema.index({ status: 1 });
-QuestionSchema.index({ knowledgePoints: 1 });
+// 索引优化
+QuestionSchema.index({ type: 1, difficulty: 1 });
+QuestionSchema.index({ chapter: 1, section: 1 });
+QuestionSchema.index({ keywords: 1 });
 QuestionSchema.index({ createdBy: 1 });
+QuestionSchema.index({ isActive: 1 });
 QuestionSchema.index({ createdAt: -1 });
-QuestionSchema.index({ title: 'text', content: 'text' }); // 全文搜索索引
 
-// 验证选项正确答案一致性
-QuestionSchema.pre('save', function(next) {
-  if (this.type === QuestionType.SINGLE_CHOICE && this.options) {
-    const correctOptions = this.options.filter(opt => opt.isCorrect);
-    if (correctOptions.length !== 1) {
-      return next(new Error('单选题必须有且仅有一个正确答案'));
-    }
-  }
-  
-  if (this.type === QuestionType.MULTIPLE_CHOICE && this.options) {
-    const correctOptions = this.options.filter(opt => opt.isCorrect);
-    if (correctOptions.length < 2) {
-      return next(new Error('多选题至少需要两个正确答案'));
-    }
-  }
-  
-  if (this.type === QuestionType.TRUE_FALSE && this.options) {
-    if (this.options.length !== 2) {
-      return next(new Error('判断题必须有两个选项'));
-    }
-  }
-  
-  next();
+// 虚拟字段：格式化创建时间
+QuestionSchema.virtual('formattedCreatedAt').get(function(this: IQuestion & Document) {
+  return this.createdAt.toLocaleDateString('zh-CN');
 });
 
-// 创建模型
-export const Question = mongoose.model<IQuestionDocument>('Question', QuestionSchema);
+// 静态方法：按条件查询题目
+QuestionSchema.statics.findByFilters = function(filters: any) {
+  const query: any = { isActive: true };
+  
+  if (filters.type) query.type = filters.type;
+  if (filters.difficulty) query.difficulty = filters.difficulty;
+  if (filters.chapter) query.chapter = filters.chapter;
+  if (filters.section) query.section = filters.section;
+  if (filters.keywords && filters.keywords.length > 0) {
+    query.keywords = { $in: filters.keywords };
+  }
+  
+  return this.find(query);
+};
+
+export default mongoose.model<IQuestion>('Question', QuestionSchema);

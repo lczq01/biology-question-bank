@@ -1,3 +1,6 @@
+// 题型类型定义
+type QuestionType = 'single_choice' | 'multiple_choice' | 'fill_blank';
+
 // 试卷状态枚举
 export enum PaperStatus {
   DRAFT = 'draft',

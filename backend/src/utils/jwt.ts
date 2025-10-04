@@ -6,7 +6,7 @@ import { IJwtPayload } from '../types/common.types';
 export const generateToken = (payload: Omit<IJwtPayload, 'iat' | 'exp'>): string => {
   return jwt.sign(payload, config.jwt.secret, {
     expiresIn: config.jwt.expiresIn
-  });
+  } as jwt.SignOptions);
 };
 
 // 验证JWT令牌

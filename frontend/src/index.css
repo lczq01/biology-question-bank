@@ -10,3 +10,32 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+#root {
+  min-height: 100vh;
+}
+
+/* SafeHtmlRenderer 组件中嵌入图片的样式 */
+.safe-html-content img {
+  max-width: 100%;
+  max-height: 300px;
+  height: auto;
+  border-radius: 8px;
+  margin: 8px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: block;
+}
+
+/* 确保图片在不同容器中都能正确显示 */
+.safe-html-content {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.safe-html-content p {
+  margin: 8px 0;
+}
+
+.safe-html-content strong {
+  font-weight: 600;
+}

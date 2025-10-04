@@ -1,9 +1,24 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcryptjs';
 import { IUser, UserRole, UserStatus } from '../types/user.types';
 
 // 扩展Document接口
-export interface IUserDocument extends IUser, Document {
+export interface IUserDocument extends Document {
+  _id: mongoose.Types.ObjectId;
+  username: string;
+  email: string;
+  password: string;
+  role: UserRole;
+  status: UserStatus;
+  profile: {
+    firstName: string;
+    lastName: string;
+    avatar?: string;
+    grade?: string;
+    class?: string;
+  };
+  createdAt: Date;
+  updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -12,7 +27,6 @@ const UserSchema = new Schema<IUserDocument>({
   username: {
     type: String,
     required: [true, '用户名不能为空'],
-    unique: true,
     trim: true,
     minlength: [3, '用户名至少3个字符'],
     maxlength: [20, '用户名最多20个字符'],
@@ -22,7 +36,6 @@ const UserSchema = new Schema<IUserDocument>({
   email: {
     type: String,
     required: [true, '邮箱不能为空'],
-    unique: true,
     trim: true,
     lowercase: true,
     match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, '请输入有效的邮箱地址']
@@ -81,15 +94,15 @@ const UserSchema = new Schema<IUserDocument>({
   timestamps: true,
   toJSON: {
     transform: function(doc, ret) {
-      delete ret.password;
-      return ret;
+      const { password, ...rest } = ret;
+      return rest;
     }
   }
 });
 
 // 创建索引
-UserSchema.index({ username: 1 });
-UserSchema.index({ email: 1 });
+UserSchema.index({ username: 1 }, { unique: true });
+UserSchema.index({ email: 1 }, { unique: true });
 UserSchema.index({ role: 1 });
 UserSchema.index({ status: 1 });
 UserSchema.index({ createdAt: -1 });

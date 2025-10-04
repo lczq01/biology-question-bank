@@ -1,21 +1,19 @@
-import React from 'react'
+import { FC } from 'react';
+import { BrowserRouter as Router } from 'react-router-dom';
+import { AuthProvider } from './hooks/useAuth';
+import { ExamBasketProvider } from './contexts/ExamBasketContext';
+import AppRoutes from './components/AppRoutes';
 
-function App() {
+const App: FC = () => {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-blue-600 mb-4">
-          高中生物题库系统
-        </h1>
-        <p className="text-gray-600">
-          项目基础结构初始化完成 ✅
-        </p>
-        <div className="mt-8 text-sm text-gray-500">
-          步骤1: 项目基础结构初始化 - 已完成
-        </div>
-      </div>
-    </div>
-  )
-}
+    <AuthProvider>
+      <ExamBasketProvider>
+        <Router>
+          <AppRoutes />
+        </Router>
+      </ExamBasketProvider>
+    </AuthProvider>
+  );
+};
 
-export default App
+export default App;

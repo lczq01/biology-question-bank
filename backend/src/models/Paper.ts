@@ -1,8 +1,34 @@
-import mongoose, { Schema, Document } from 'mongoose';
-import { IPaper, PaperType, PaperStatus } from '../types/paper.types';
+import mongoose, { Schema, Document, Types } from 'mongoose';
+import { PaperType, PaperStatus } from '../types/paper.types';
 
-// 扩展Document接口
-export interface IPaperDocument extends IPaper, Document {}
+// 定义IPaperDocument接口
+export interface IPaperDocument extends Document {
+  title: string;
+  description?: string;
+  type: PaperType;
+  status: PaperStatus;
+  config: {
+    totalQuestions: number;
+    totalPoints: number;
+    timeLimit: number;
+    allowReview: boolean;
+    shuffleQuestions: boolean;
+    shuffleOptions: boolean;
+  };
+  questions: Array<{
+    questionId: Types.ObjectId;
+    order: number;
+    points: number;
+  }>;
+  createdBy: Types.ObjectId;
+  stats: {
+    totalAttempts: number;
+    averageScore: number;
+    passRate: number;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 // 试卷题目配置Schema
 const PaperQuestionConfigSchema = new Schema({

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>题目CRUD API演示</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            color: #1976d2;
+        }
+        .api-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #1976d2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #1565c0;
+        }
+        .response {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            border-left: 4px solid #4caf50;
+        }
+        .error {
+            border-left: 4px solid #f44336;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧬 高中生物题库系统 - API功能演示</h1>
+        <p>当前后端服务器运行在: <strong>http://localhost:3000</strong></p>
+    </div>
+
+    <!-- 1. 获取题目列表 -->
+    <div class="container api-section">
+        <h2>📋 1. 获取题目列表</h2>
+        <p>获取所有题目，支持分页和筛选</p>
+        <button onclick="getQuestions()">获取题目列表</button>
+        <button onclick="getQuestionsWithFilter()">获取筛选后的题目</button>
+        <div id="questions-response" class="response"></div>
+    </div>
+
+    <!-- 2. 获取单个题目 -->
+    <div class="container api-section">
+        <h2>🔍 2. 获取单个题目</h2>
+        <input type="text" id="question-id" placeholder="输入题目ID (例如: 1)" value="1">
+        <button onclick="getQuestion()">获取题目详情</button>
+        <div id="question-response" class="response"></div>
+    </div>
+
+    <!-- 3. 创建新题目 -->
+    <div class="container api-section">
+        <h2>➕ 3. 创建新题目</h2>
+        <div class="form-group">
+            <label>题目标题:</label>
+            <input type="text" id="new-title" value="植物细胞壁的主要成分是什么？">
+        </div>
+        <div class="form-group">
+            <label>题目内容:</label>
+            <textarea id="new-content" rows="3">植物细胞壁是植物细胞特有的结构，具有保护和支撑作用。</textarea>
+        </div>
+        <div class="form-group">
+            <label>题目类型:</label>
+            <select id="new-type">
+                <option value="single_choice">单选题</option>
+                <option value="multiple_choice">多选题</option>
+                <option value="true_false">判断题</option>
+                <option value="fill_blank">填空题</option>
+                <option value="short_answer">简答题</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>难度:</label>
+            <select id="new-difficulty">
+                <option value="easy">容易</option>
+                <option value="medium">中等</option>
+                <option value="hard">困难</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>章节:</label>
+            <input type="text" id="new-chapter" value="细胞的结构和功能">
+        </div>
+        <button onclick="createQuestion()">创建题目</button>
+        <div id="create-response" class="response"></div>
+    </div>
+
+    <!-- 4. 更新题目 -->
+    <div class="container api-section">
+        <h2>✏️ 4. 更新题目</h2>
+        <div class="form-group">
+            <label>题目ID:</label>
+            <input type="text" id="update-id" placeholder="要更新的题目ID" value="1">
+        </div>
+        <div class="form-group">
+            <label>新标题:</label>
+            <input type="text" id="update-title" value="细胞膜的主要成分是什么？(已更新)">
+        </div>
+        <div class="form-group">
+            <label>新内容:</label>
+            <textarea id="update-content" rows="3">细胞膜的主要成分包括磷脂分子和蛋白质，其中磷脂分子构成膜的基本骨架。(内容已更新)</textarea>
+        </div>
+        <button onclick="updateQuestion()">更新题目</button>
+        <div id="update-response" class="response"></div>
+    </div>
+
+    <!-- 5. 删除题目 -->
+    <div class="container api-section">
+        <h2>🗑️ 5. 删除题目</h2>
+        <input type="text" id="delete-id" placeholder="要删除的题目ID" value="3">
+        <button onclick="deleteQuestion()" style="background-color: #f44336;">删除题目</button>
+        <div id="delete-response" class="response"></div>
+    </div>
+
+    <!-- 6. 获取统计信息 -->
+    <div class="container api-section">
+        <h2>📊 6. 获取题目统计</h2>
+        <button onclick="getStats()">获取统计信息</button>
+        <div id="stats-response" class="response"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+
+        // 通用请求函数
+        async function makeRequest(url, options = {}) {
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                const data = await response.json();
+                return { success: response.ok, data, status: response.status };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        // 显示响应结果
+        function displayResponse(elementId, result) {
+            const element = document.getElementById(elementId);
+            element.className = 'response ' + (result.success ? 'success' : 'error');
+            element.textContent = JSON.stringify(result, null, 2);
+        }
+
+        // 1. 获取题目列表
+        async function getQuestions() {
+            const result = await makeRequest(`${API_BASE}/questions`);
+            displayResponse('questions-response', result);
+        }
+
+        // 获取筛选后的题目
+        async function getQuestionsWithFilter() {
+            const result = await makeRequest(`${API_BASE}/questions?type=single_choice&difficulty=easy&page=1&limit=5`);
+            displayResponse('questions-response', result);
+        }
+
+        // 2. 获取单个题目
+        async function getQuestion() {
+            const id = document.getElementById('question-id').value;
+            if (!id) {
+                alert('请输入题目ID');
+                return;
+            }
+            const result = await makeRequest(`${API_BASE}/questions/${id}`);
+            displayResponse('question-response', result);
+        }
+
+        // 3. 创建新题目
+        async function createQuestion() {
+            const questionData = {
+                title: document.getElementById('new-title').value,
+                content: document.getElementById('new-content').value,
+                type: document.getElementById('new-type').value,
+                difficulty: document.getElementById('new-difficulty').value,
+                chapter: document.getElementById('new-chapter').value,
+                options: [
+                    { id: 'A', text: '纤维素', isCorrect: true },
+                    { id: 'B', text: '蛋白质', isCorrect: false },
+                    { id: 'C', text: '磷脂', isCorrect: false },
+                    { id: 'D', text: '核酸', isCorrect: false }
+                ],
+                explanation: '植物细胞壁主要由纤维素构成，具有保护和支撑作用。'
+            };
+
+            const result = await makeRequest(`${API_BASE}/questions`, {
+                method: 'POST',
+                body: JSON.stringify(questionData)
+            });
+            displayResponse('create-response', result);
+        }
+
+        // 4. 更新题目
+        async function updateQuestion() {
+            const id = document.getElementById('update-id').value;
+            if (!id) {
+                alert('请输入题目ID');
+                return;
+            }
+
+            const updateData = {
+                title: document.getElementById('update-title').value,
+                content: document.getElementById('update-content').value
+            };
+
+            const result = await makeRequest(`${API_BASE}/questions/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify(updateData)
+            });
+            displayResponse('update-response', result);
+        }
+
+        // 5. 删除题目
+        async function deleteQuestion() {
+            const id = document.getElementById('delete-id').value;
+            if (!id) {
+                alert('请输入题目ID');
+                return;
+            }
+
+            if (!confirm(`确定要删除题目 ${id} 吗？`)) {
+                return;
+            }
+
+            const result = await makeRequest(`${API_BASE}/questions/${id}`, {
+                method: 'DELETE'
+            });
+            displayResponse('delete-response', result);
+        }
+
+        // 6. 获取统计信息
+        async function getStats() {
+            const result = await makeRequest(`${API_BASE}/questions/stats`);
+            displayResponse('stats-response', result);
+        }
+
+        // 页面加载时自动获取题目列表
+        window.onload = function() {
+            getQuestions();
+        };
+    </script>
+</body>
+</html>

@@ -1,8 +1,30 @@
-import mongoose, { Schema, Document } from 'mongoose';
-import { IExam, ExamStatus } from '../types/exam.types';
+import mongoose, { Schema, Document, Types } from 'mongoose';
+import { IExam, ExamRecordStatus } from '../types/exam.types';
 
 // 扩展Document接口
-export interface IExamDocument extends IExam, Document {}
+export interface IExamDocument extends Omit<IExam, '_id' | 'paperId' | 'studentId'>, Document {
+  paperId: Types.ObjectId;
+  studentId: Types.ObjectId;
+}
+
+// 考试配置Schema
+const ExamConfigSchema = new Schema({
+  timeLimit: {
+    type: Number,
+    required: [true, '考试时长不能为空'],
+    min: [1, '考试时长至少为1分钟']
+  },
+  totalQuestions: {
+    type: Number,
+    required: [true, '总题数不能为空'],
+    min: [1, '总题数至少为1']
+  },
+  totalPoints: {
+    type: Number,
+    required: [true, '总分不能为空'],
+    min: [1, '总分至少为1']
+  }
+}, { _id: false });
 
 // 答题记录Schema
 const AnswerRecordSchema = new Schema({
@@ -49,8 +71,8 @@ const ExamSchema = new Schema<IExamDocument>({
   
   status: {
     type: String,
-    enum: Object.values(ExamStatus),
-    default: ExamStatus.NOT_STARTED,
+    enum: Object.values(ExamRecordStatus),
+    default: ExamRecordStatus.NOT_STARTED,
     required: true
   },
   
@@ -103,22 +125,3 @@ ExamSchema.index({ studentId: 1, paperId: 1 });
 
 // 创建模型
 export const Exam = mongoose.model<IExamDocument>('Exam', ExamSchema);
-
-// 考试配置Schema
-const ExamConfigSchema = new Schema({
-  timeLimit: {
-    type: Number,
-    required: [true, '考试时长不能为空'],
-    min: [1, '考试时长至少为1分钟']
-  },
-  totalQuestions: {
-    type: Number,
-    required: [true, '总题数不能为空'],
-    min: [1, '总题数至少为1']
-  },
-  totalPoints: {
-    type: Number,
-    required: [true, '总分不能为空'],
-    min: [1, '总分至少为1']
-  }
-}, { _id: false });

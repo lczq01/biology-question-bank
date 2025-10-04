@@ -5,8 +5,6 @@ import { IDatabaseConfig } from '../types/common.types';
 export const connectDatabase = async (config: IDatabaseConfig): Promise<void> => {
   try {
     const options = {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
@@ -33,7 +31,8 @@ export const connectDatabase = async (config: IDatabaseConfig): Promise<void> =>
     
   } catch (error) {
     console.error('❌ MongoDB连接失败:', error);
-    process.exit(1);
+    console.warn('⚠️ 将使用模拟数据模式运行');
+    // 不退出进程，让服务器继续运行
   }
 };
 

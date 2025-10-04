@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高中生物题库系统 - 登录</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            width: 100%;
+            max-width: 900px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            min-height: 600px;
+        }
+
+        .left-panel {
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+            color: white;
+            padding: 60px 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo::before {
+            content: "🧬";
+            font-size: 3rem;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 30px;
+        }
+
+        .features {
+            list-style: none;
+            text-align: left;
+        }
+
+        .features li {
+            margin: 10px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .features li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .right-panel {
+            padding: 60px 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .form-container {
+            max-width: 350px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .form-title {
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .form-subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #2196F3;
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1976D2;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: #2196F3;
+            border: 2px solid #2196F3;
+            margin-top: 15px;
+        }
+
+        .btn-secondary:hover {
+            background: #2196F3;
+            color: white;
+        }
+
+        .form-switch {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .switch-text {
+            color: #666;
+        }
+
+        .switch-link {
+            color: #2196F3;
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .switch-link:hover {
+            text-decoration: underline;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .error-message {
+            color: #f44336;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .success-message {
+            color: #4CAF50;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                max-width: 400px;
+            }
+            
+            .left-panel {
+                padding: 40px 20px;
+            }
+            
+            .right-panel {
+                padding: 40px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 左侧面板 -->
+        <div class="left-panel">
+            <div class="logo">高中生物题库</div>
+            <div class="subtitle">智能化学习管理平台</div>
+            <ul class="features">
+                <li>海量生物题库资源</li>
+                <li>智能筛选与搜索</li>
+                <li>自动组卷功能</li>
+                <li>在线考试系统</li>
+                <li>学习进度跟踪</li>
+            </ul>
+        </div>
+
+        <!-- 右侧登录表单 -->
+        <div class="right-panel">
+            <div class="form-container">
+                <!-- 登录表单 -->
+                <form id="loginForm">
+                    <h2 class="form-title">欢迎回来</h2>
+                    <p class="form-subtitle">请登录您的账户</p>
+                    
+                    <div class="form-group">
+                        <label class="form-label">用户名</label>
+                        <input type="text" class="form-input" id="loginUsername" placeholder="请输入用户名" required>
+                        <div class="error-message" id="loginUsernameError"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">密码</label>
+                        <input type="password" class="form-input" id="loginPassword" placeholder="请输入密码" required>
+                        <div class="error-message" id="loginPasswordError"></div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">登录</button>
+                    
+                    <div class="form-switch">
+                        <span class="switch-text">还没有账户？</span>
+                        <a href="#" class="switch-link" onclick="showRegister()">立即注册</a>
+                    </div>
+                </form>
+
+                <!-- 注册表单 -->
+                <form id="registerForm" class="hidden">
+                    <h2 class="form-title">创建账户</h2>
+                    <p class="form-subtitle">加入我们的学习平台</p>
+                    
+                    <div class="form-group">
+                        <label class="form-label">用户名</label>
+                        <input type="text" class="form-input" id="registerUsername" placeholder="请输入用户名" required>
+                        <div class="error-message" id="registerUsernameError"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">邮箱</label>
+                        <input type="email" class="form-input" id="registerEmail" placeholder="请输入邮箱地址" required>
+                        <div class="error-message" id="registerEmailError"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">密码</label>
+                        <input type="password" class="form-input" id="registerPassword" placeholder="请输入密码（至少6位）" required>
+                        <div class="error-message" id="registerPasswordError"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">用户类型</label>
+                        <select class="form-select" id="registerRole" required>
+                            <option value="">请选择用户类型</option>
+                            <option value="student">学生</option>
+                            <option value="admin">管理员</option>
+                        </select>
+                        <div class="error-message" id="registerRoleError"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">姓名</label>
+                        <input type="text" class="form-input" id="registerName" placeholder="请输入真实姓名" required>
+                        <div class="error-message" id="registerNameError"></div>
+                    </div>
+                    
+                    <div class="form-group" id="studentInfo" style="display: none;">
+                        <label class="form-label">年级班级</label>
+                        <input type="text" class="form-input" id="registerGrade" placeholder="例如：高一3班">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">注册</button>
+                    
+                    <div class="form-switch">
+                        <span class="switch-text">已有账户？</span>
+                        <a href="#" class="switch-link" onclick="showLogin()">立即登录</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 表单切换功能
+        function showLogin() {
+            document.getElementById('loginForm').classList.remove('hidden');
+            document.getElementById('registerForm').classList.add('hidden');
+            clearErrors();
+        }
+
+        function showRegister() {
+            document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('registerForm').classList.remove('hidden');
+            clearErrors();
+        }
+
+        // 清除错误信息
+        function clearErrors() {
+            const errorElements = document.querySelectorAll('.error-message');
+            errorElements.forEach(el => el.textContent = '');
+        }
+
+        // 显示错误信息
+        function showError(fieldId, message) {
+            document.getElementById(fieldId + 'Error').textContent = message;
+        }
+
+        // 表单验证
+        function validateLogin(username, password) {
+            let isValid = true;
+            
+            if (!username.trim()) {
+                showError('loginUsername', '请输入用户名');
+                isValid = false;
+            }
+            
+            if (!password.trim()) {
+                showError('loginPassword', '请输入密码');
+                isValid = false;
+            }
+            
+            return isValid;
+        }
+
+        function validateRegister(data) {
+            let isValid = true;
+            
+            if (!data.username.trim()) {
+                showError('registerUsername', '请输入用户名');
+                isValid = false;
+            } else if (data.username.length < 3) {
+                showError('registerUsername', '用户名至少3个字符');
+                isValid = false;
+            }
+            
+            if (!data.email.trim()) {
+                showError('registerEmail', '请输入邮箱');
+                isValid = false;
+            } else if (!/\S+@\S+\.\S+/.test(data.email)) {
+                showError('registerEmail', '邮箱格式不正确');
+                isValid = false;
+            }
+            
+            if (!data.password.trim()) {
+                showError('registerPassword', '请输入密码');
+                isValid = false;
+            } else if (data.password.length < 6) {
+                showError('registerPassword', '密码至少6个字符');
+                isValid = false;
+            }
+            
+            if (!data.role) {
+                showError('registerRole', '请选择用户类型');
+                isValid = false;
+            }
+            
+            if (!data.name.trim()) {
+                showError('registerName', '请输入姓名');
+                isValid = false;
+            }
+            
+            return isValid;
+        }
+
+        // 用户类型变化处理
+        document.getElementById('registerRole').addEventListener('change', function() {
+            const studentInfo = document.getElementById('studentInfo');
+            if (this.value === 'student') {
+                studentInfo.style.display = 'block';
+            } else {
+                studentInfo.style.display = 'none';
+            }
+        });
+
+        // 登录表单提交
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            clearErrors();
+            
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (validateLogin(username, password)) {
+                // 模拟登录请求
+                console.log('登录数据:', { username, password });
+                alert('登录功能演示\n用户名: ' + username + '\n密码: ' + password + '\n\n实际项目中这里会调用后端API');
+            }
+        });
+
+        // 注册表单提交
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            clearErrors();
+            
+            const data = {
+                username: document.getElementById('registerUsername').value,
+                email: document.getElementById('registerEmail').value,
+                password: document.getElementById('registerPassword').value,
+                role: document.getElementById('registerRole').value,
+                name: document.getElementById('registerName').value,
+                grade: document.getElementById('registerGrade').value
+            };
+            
+            if (validateRegister(data)) {
+                // 模拟注册请求
+                console.log('注册数据:', data);
+                alert('注册功能演示\n' + JSON.stringify(data, null, 2) + '\n\n实际项目中这里会调用后端API');
+            }
+        });
+
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('高中生物题库系统 - 前端预览版本');
+            console.log('当前显示: 用户登录/注册界面');
+            console.log('技术栈: HTML5 + CSS3 + JavaScript');
+        });
+    </script>
+</body>
+</html>

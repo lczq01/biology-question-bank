@@ -1,0 +1,12 @@
+{
+  "title": "测试题目",
+  "content": "这是一道测试题目",
+  "type": "single_choice",
+  "difficulty": "easy",
+  "chapter": "测试章节",
+  "options": [
+    {"id": "A", "text": "选项A", "isCorrect": true},
+    {"id": "B", "text": "选项B", "isCorrect": false}
+  ],
+  "explanation": "这是解析"
+}
