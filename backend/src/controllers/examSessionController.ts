@@ -492,7 +492,7 @@ export const createExamSession = async (req: Request, res: Response) => {
       endTime: endDate,
       duration,
       settings: defaultSettings,
-      status: ExamSessionStatus.DRAFT,
+      status: sessionData.status || ExamSessionStatus.DRAFT, // 允许指定状态，默认为DRAFT
       allowedUsers: [],
       createdAt: new Date(),
       updatedAt: new Date()

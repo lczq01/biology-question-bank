@@ -22,6 +22,15 @@ import {
   batchAddParticipants,
   batchRemoveParticipants
 } from '../controllers/examParticipantController';
+import {
+  joinExamSession,
+  getAvailableExamSessions,
+  getExamSessionStudentView
+} from '../controllers/examSessionJoinController';
+import {
+  startExam,
+  getExamProgress
+} from '../controllers/examStartController';
 import { checkPermission } from '../middleware/examSessionAuth';
 import { ExamManagementPermission } from '../types/exam-management.types';
 import { mockAuthenticate } from '../middleware/mockAuth';
@@ -40,6 +49,16 @@ router.get(
   '/',
   checkPermission(ExamManagementPermission.READ_SESSION),
   getExamSessions
+);
+
+/**
+ * @route GET /api/exam-sessions/available
+ * @desc 获取用户可参与的考试会话列表
+ * @access 学生权限
+ */
+router.get(
+  '/available',
+  getAvailableExamSessions
 );
 
 /**
@@ -149,6 +168,46 @@ router.post(
   '/:id/participants/batch-remove',
   checkPermission(ExamManagementPermission.UPDATE_SESSION),
   batchRemoveParticipants
+);
+
+/**
+ * @route GET /api/exam-sessions/:id/student-view
+ * @desc 获取考试会话详情（学生视角）
+ * @access 学生权限
+ */
+router.get(
+  '/:id/student-view',
+  getExamSessionStudentView
+);
+
+/**
+ * @route POST /api/exam-sessions/:id/join
+ * @desc 学生加入考试会话
+ * @access 学生权限
+ */
+router.post(
+  '/:id/join',
+  joinExamSession
+);
+
+/**
+ * @route POST /api/exam-sessions/:id/start
+ * @desc 开始考试
+ * @access 学生权限
+ */
+router.post(
+  '/:id/start',
+  startExam
+);
+
+/**
+ * @route GET /api/exam-sessions/:id/progress
+ * @desc 获取考试进度
+ * @access 学生权限
+ */
+router.get(
+  '/:id/progress',
+  getExamProgress
 );
 
 /**

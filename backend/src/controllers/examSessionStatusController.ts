@@ -5,13 +5,14 @@ import { errorResponse } from '../utils/response';
 
 /**
  * 状态转换规则定义
+ * 管理员可以在任何时候将考试转换为草稿状态（取消发布）
  */
 const STATUS_TRANSITIONS: Record<ExamSessionStatus, ExamSessionStatus[]> = {
   [ExamSessionStatus.DRAFT]: [ExamSessionStatus.PUBLISHED, ExamSessionStatus.CANCELLED],
-  [ExamSessionStatus.PUBLISHED]: [ExamSessionStatus.ACTIVE, ExamSessionStatus.CANCELLED],
-  [ExamSessionStatus.ACTIVE]: [ExamSessionStatus.COMPLETED, ExamSessionStatus.CANCELLED],
-  [ExamSessionStatus.COMPLETED]: [], // 已完成的考试不能再转换
-  [ExamSessionStatus.CANCELLED]: []  // 已取消的考试不能再转换
+  [ExamSessionStatus.PUBLISHED]: [ExamSessionStatus.ACTIVE, ExamSessionStatus.CANCELLED, ExamSessionStatus.DRAFT],
+  [ExamSessionStatus.ACTIVE]: [ExamSessionStatus.COMPLETED, ExamSessionStatus.CANCELLED, ExamSessionStatus.DRAFT],
+  [ExamSessionStatus.COMPLETED]: [ExamSessionStatus.DRAFT], // 已完成的考试可以转为草稿重新编辑
+  [ExamSessionStatus.CANCELLED]: [ExamSessionStatus.DRAFT]  // 已取消的考试可以转为草稿重新编辑
 };
 
 /**

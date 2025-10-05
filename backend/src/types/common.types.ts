@@ -1,3 +1,6 @@
+import { Request } from 'express';
+import { UserRole } from './user.types';
+
 // API响应基础接口
 export interface IApiResponse<T = any> {
   success: boolean;
@@ -56,6 +59,16 @@ export interface IDatabaseConfig {
     serverSelectionTimeoutMS?: number;
     socketTimeoutMS?: number;
   };
+}
+
+// 认证请求接口
+export interface AuthenticatedRequest extends Request {
+  user?: {
+    userId: string;
+    username: string;
+    role: UserRole;
+  };
+  params: any;
 }
 
 // 应用配置接口

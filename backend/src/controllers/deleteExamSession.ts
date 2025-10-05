@@ -44,45 +44,22 @@ export const deleteExamSession = async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    // 权限检查：只有管理员或创建者可以删除考试会话
-    const creatorId = session.creatorId?.toString();
-    if (req.user?.role !== 'admin' && creatorId !== userId) {
+    // 权限检查：只有管理员可以删除考试会话
+    if (req.user?.role !== 'admin') {
       res.status(403).json({
         success: false,
         message: '无权删除该考试会话',
         error: {
           code: ExamManagementErrorCode.UNAUTHORIZED,
-          details: '您没有权限删除该考试会话'
+          details: '只有管理员可以删除考试会话'
         }
       } as IApiResponse<null>);
       return;
     }
 
-    // 检查考试状态：进行中或已完成的考试不能删除
-    if (session.status === 'active' || session.status === 'completed') {
-      res.status(400).json({
-        success: false,
-        message: '无法删除进行中或已完成的考试',
-        error: {
-          code: ExamManagementErrorCode.INVALID_INPUT,
-          details: '只能删除草稿或已发布状态的考试会话'
-        }
-      } as IApiResponse<null>);
-      return;
-    }
-
-    // 检查是否有参与者：如果有参与者，不允许删除
-    if (session.participants && session.participants.length > 0) {
-      res.status(400).json({
-        success: false,
-        message: '无法删除已有参与者的考试',
-        error: {
-          code: ExamManagementErrorCode.INVALID_INPUT,
-          details: '该考试已有参与者，无法删除'
-        }
-      } as IApiResponse<null>);
-      return;
-    }
+    // 管理员可以删除任何状态的考试（包括进行中、已完成、有参与者的考试）
+    // 删除前记录操作日志
+    console.log(`管理员 ${userId} 删除考试会话: ${session.name} (ID: ${id}, 状态: ${session.status}, 参与者数量: ${session.participants?.length || 0})`);
 
     // 执行删除操作
     await ExamSession.findByIdAndDelete(id);

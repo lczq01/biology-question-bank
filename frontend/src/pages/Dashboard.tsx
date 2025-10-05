@@ -90,11 +90,11 @@ const Dashboard: React.FC = () => {
                   </div>
                   
                   <div 
-                    onClick={() => handleNavigate('/exam-creation')}
+                    onClick={() => handleNavigate('/exam-management-new')}
                     className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
                   >
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">考试创建</h3>
-                    <p className="text-gray-600">创建新的在线考试并设置考试参数</p>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">考试管理</h3>
+                    <p className="text-gray-600">创建、编辑和管理在线考试</p>
                   </div>
                   
                   <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer">
@@ -104,14 +104,26 @@ const Dashboard: React.FC = () => {
                 </>
               ) : (
                 <>
-
-                  
-                  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                  <div 
+                    onClick={() => handleNavigate('/exam-list')}
+                    className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
+                  >
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">在线考试</h3>
                     <p className="text-gray-600">参加在线考试测试</p>
                   </div>
                   
-                  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                  <div 
+                    onClick={() => handleNavigate('/knowledge-points-view')}
+                    className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
+                  >
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">知识点浏览</h3>
+                    <p className="text-gray-600">浏览和学习生物学科知识点</p>
+                  </div>
+                  
+                  <div 
+                    onClick={() => handleNavigate('/exam/history')}
+                    className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
+                  >
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">成绩统计</h3>
                     <p className="text-gray-600">查看考试成绩和学习进度</p>
                   </div>

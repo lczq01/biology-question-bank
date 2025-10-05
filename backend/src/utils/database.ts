@@ -8,6 +8,8 @@ export const connectDatabase = async (config: IDatabaseConfig): Promise<void> =>
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
+      // 移除已废弃的选项
+      // useNewUrlParser 和 useUnifiedTopology 在 MongoDB Driver 4.0+ 已默认启用
       ...config.options
     };
 

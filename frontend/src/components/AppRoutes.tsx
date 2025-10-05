@@ -10,8 +10,13 @@ import ExamPaperGeneration from '../pages/ExamPaperGeneration';
 import ExamPaperManagement from '../pages/ExamPaperManagement';
 import DocumentImport from '../pages/DocumentImport';
 import ExamCreation from '../pages/ExamCreation';
+import ExamManagement from '../pages/ExamManagement';
 import ExamList from '../pages/ExamList';
+import ExamTaking from '../pages/ExamTaking';
+import ExamResult from '../pages/ExamResult';
+import ExamHistory from '../pages/ExamHistory';
 import KnowledgePointManagement from '../pages/KnowledgePointManagement';
+import KnowledgePointView from '../pages/KnowledgePointView';
 
 // 受保护的路由组件
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -125,10 +130,42 @@ const AppRoutes: React.FC = () => {
         } 
       />
       <Route 
+        path="/exam-management-new" 
+        element={
+          <ProtectedRoute>
+            <ExamManagement />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
         path="/exam-list" 
         element={
           <ProtectedRoute>
             <ExamList />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/exam-taking/:sessionId" 
+        element={
+          <ProtectedRoute>
+            <ExamTaking />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/exam-result" 
+        element={
+          <ProtectedRoute>
+            <ExamResult />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/exam/history" 
+        element={
+          <ProtectedRoute>
+            <ExamHistory />
           </ProtectedRoute>
         } 
       />
@@ -145,6 +182,14 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute>
             <KnowledgePointManagement />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/knowledge-points-view" 
+        element={
+          <ProtectedRoute>
+            <KnowledgePointView />
           </ProtectedRoute>
         } 
       />

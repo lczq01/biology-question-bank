@@ -269,103 +269,106 @@ const ExamPaperManagement: React.FC = () => {
           </CardContent>
         </Card>
       ) : (
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {examPapers.map((paper) => (
-            <Box key={paper.id}>
-              <Card sx={{ 
-                height: '100%', 
-                display: 'flex', 
-                flexDirection: 'column',
-                boxShadow: 3,
-                '&:hover': {
-                  boxShadow: 6,
-                  transform: 'translateY(-2px)',
-                  transition: 'all 0.3s ease'
-                }
-              }}>
-                <CardContent sx={{ flex: 1 }}>
-                  <Typography variant="h6" gutterBottom sx={{ 
-                    fontWeight: 'bold',
-                    color: '#333',
-                    minHeight: '3em',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden'
-                  }}>
-                    {paper.title}
-                  </Typography>
-                  
-                  <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
-                    <Chip
-                      icon={<QuestionIcon />}
-                      label={`${paper.totalQuestions}题`}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                    />
-                    <Chip
-                      icon={<GradeIcon />}
-                      label={`${paper.totalPoints}分`}
-                      size="small"
-                      color="success"
-                      variant="outlined"
-                    />
-                    <Chip
-                      label={paper.type === 'manual' ? '手动组卷' : '自动组卷'}
-                      size="small"
-                      color={paper.type === 'manual' ? 'secondary' : 'info'}
-                      variant="outlined"
-                    />
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', alignItems: 'center', color: 'text.secondary', mb: 1 }}>
-                    <TimeIcon sx={{ fontSize: 16, mr: 1 }} />
-                    <Typography variant="caption">
-                      创建时间：{formatDate(paper.createdAt)}
+            <Card key={paper.id} sx={{ 
+              boxShadow: 2,
+              '&:hover': {
+                boxShadow: 4,
+                transform: 'translateY(-1px)',
+                transition: 'all 0.3s ease'
+              },
+              borderRadius: 2
+            }}>
+              <CardContent sx={{ pb: 1 }}>
+                {/* 试卷标题和基本信息行 */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                  <Box sx={{ flex: 1, mr: 2 }}>
+                    <Typography variant="h6" sx={{ 
+                      fontWeight: 'bold',
+                      color: '#333',
+                      mb: 1,
+                      lineHeight: 1.4
+                    }}>
+                      {paper.title}
                     </Typography>
+                    
+                    {/* 标签行 */}
+                    <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <Chip
+                        icon={<QuestionIcon />}
+                        label={`${paper.totalQuestions}题`}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                      />
+                      <Chip
+                        icon={<GradeIcon />}
+                        label={`${paper.totalPoints}分`}
+                        size="small"
+                        color="success"
+                        variant="outlined"
+                      />
+                      <Chip
+                        label={paper.type === 'manual' ? '手动组卷' : '自动组卷'}
+                        size="small"
+                        color={paper.type === 'manual' ? 'secondary' : 'info'}
+                        variant="outlined"
+                      />
+                    </Box>
+                    
+                    {/* 时间和创建者信息 */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, color: 'text.secondary' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <TimeIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                        <Typography variant="caption">
+                          {formatDate(paper.createdAt)}
+                        </Typography>
+                      </Box>
+                      <Typography variant="caption">
+                        创建者：{paper.createdBy}
+                      </Typography>
+                    </Box>
                   </Box>
                   
-                  <Typography variant="caption" color="text.secondary">
-                    创建者：{paper.createdBy}
-                  </Typography>
-                </CardContent>
-                
-                <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
-                  <Button
-                    startIcon={<ViewIcon />}
-                    onClick={() => handleViewPaper(paper.id)}
-                    variant="outlined"
-                    size="small"
-                    sx={{ 
-                      borderColor: '#4caf50',
-                      color: '#4caf50',
-                      '&:hover': {
-                        borderColor: '#388e3c',
-                        background: '#e8f5e8'
-                      }
-                    }}
-                  >
-                    查看详情
-                  </Button>
-                  
-                  <Tooltip title="删除试卷">
-                    <IconButton
-                      onClick={() => handleDeletePaper(paper.id)}
+                  {/* 操作按钮 */}
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <Button
+                      startIcon={<ViewIcon />}
+                      onClick={() => handleViewPaper(paper.id)}
+                      variant="outlined"
                       size="small"
                       sx={{ 
-                        color: '#f44336',
+                        borderColor: '#4caf50',
+                        color: '#4caf50',
                         '&:hover': {
-                          background: '#ffebee'
-                        }
+                          borderColor: '#388e3c',
+                          background: '#e8f5e8'
+                        },
+                        minWidth: '100px'
                       }}
                     >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Tooltip>
-                </CardActions>
-              </Card>
-            </Box>
+                      查看详情
+                    </Button>
+                    
+                    <Tooltip title="删除试卷">
+                      <IconButton
+                        onClick={() => handleDeletePaper(paper.id)}
+                        size="small"
+                        sx={{ 
+                          color: '#f44336',
+                          '&:hover': {
+                            background: '#ffebee'
+                          }
+                        }}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
           ))}
         </Box>
       )}
@@ -413,34 +416,87 @@ const ExamPaperManagement: React.FC = () => {
                 题目列表：
               </Typography>
               
-              <List sx={{ maxHeight: 400, overflow: 'auto' }}>
+              <List sx={{ maxHeight: 500, overflow: 'auto' }}>
                 {selectedPaper.questions.map((question, index) => (
-                  <React.Fragment key={question._id || index}>
-                    <ListItem sx={{ alignItems: 'flex-start' }}>
+                  <React.Fragment key={question._id !== 'missing' ? question._id : `question-${index}`}>
+                    <ListItem sx={{ alignItems: 'flex-start', py: 2 }}>
                       <ListItemText
                         primary={
                           <Box>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
-                              {index + 1}. 
+                            {/* 题目标题和内容 */}
+                            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2, color: '#333' }}>
+                              第{index + 1}题 ({getTypeLabel(question.type)}) - {question.points || 0}分
                             </Typography>
-                            <Box sx={{ mb: 2 }}>
+                            
+                            {/* 题目内容 */}
+                            <Box sx={{ mb: 2, p: 2, bgcolor: '#fafafa', borderRadius: 1, border: '1px solid #e0e0e0' }}>
+                              <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1, color: '#555' }}>
+                                题目：
+                              </Typography>
                               <SafeHtmlRenderer 
                                 html={question.content || '题目内容'} 
-                                maxLength={100}
                               />
                             </Box>
+
+                            {/* 选择题选项 */}
+                            {(question.type === 'single_choice' || question.type === 'multiple_choice') && question.options && (
+                              <Box sx={{ mb: 2, p: 2, bgcolor: '#f0f8ff', borderRadius: 1, border: '1px solid #b3d9ff' }}>
+                                <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1, color: '#555' }}>
+                                  选项：
+                                </Typography>
+                                {question.options.map((option: any, optionIndex: number) => (
+                                  <Box key={optionIndex} sx={{ mb: 1, display: 'flex', alignItems: 'flex-start' }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, minWidth: '20px', color: '#666' }}>
+                                      {String.fromCharCode(65 + optionIndex)}.
+                                    </Typography>
+                                    <Box sx={{ flex: 1 }}>
+                                      <SafeHtmlRenderer html={option.text || option} />
+                                    </Box>
+                                  </Box>
+                                ))}
+                              </Box>
+                            )}
+
+                            {/* 正确答案 */}
+                            {question.correctAnswer && (
+                              <Box sx={{ mb: 2, p: 2, bgcolor: '#f0fff0', borderRadius: 1, border: '1px solid #90ee90' }}>
+                                <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1, color: '#555' }}>
+                                  正确答案：
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: '#2e7d32', fontWeight: 'bold' }}>
+                                  {question.type === 'fill_blank' ? (
+                                    Array.isArray(question.correctAnswer) 
+                                      ? question.correctAnswer.join('、') 
+                                      : question.correctAnswer
+                                  ) : (
+                                    question.type === 'single_choice' ? (
+                                      `${question.correctAnswer} (${question.options?.[question.correctAnswer.charCodeAt(0) - 65]?.text || question.options?.[question.correctAnswer.charCodeAt(0) - 65] || ''})`
+                                    ) : question.type === 'multiple_choice' ? (
+                                      Array.isArray(question.correctAnswer) 
+                                        ? question.correctAnswer.map((ans: string) => 
+                                            `${ans} (${question.options?.[ans.charCodeAt(0) - 65]?.text || question.options?.[ans.charCodeAt(0) - 65] || ''})`
+                                          ).join('、')
+                                        : question.correctAnswer
+                                    ) : question.correctAnswer
+                                  )}
+                                </Typography>
+                              </Box>
+                            )}
+
+                            {/* 解析 */}
                             {question.explanation && (
-                              <Box sx={{ mb: 2, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
-                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#666' }}>
+                              <Box sx={{ mb: 2, p: 2, bgcolor: '#fff8e1', borderRadius: 1, border: '1px solid #ffcc02' }}>
+                                <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1, color: '#555' }}>
                                   解析：
                                 </Typography>
                                 <SafeHtmlRenderer 
                                   html={question.explanation} 
-                                  maxLength={150}
                                 />
                               </Box>
                             )}
-                            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+
+                            {/* 题目属性标签 */}
+                            <Box sx={{ display: 'flex', gap: 1, mt: 2, flexWrap: 'wrap' }}>
                               <Chip
                                 label={getTypeLabel(question.type)}
                                 size="small"
@@ -454,7 +510,7 @@ const ExamPaperManagement: React.FC = () => {
                                 variant="outlined"
                               />
                               <Chip
-                                label={question.chapter}
+                                label={question.chapter || '未分类'}
                                 size="small"
                                 color="info"
                                 variant="outlined"
@@ -465,12 +521,20 @@ const ExamPaperManagement: React.FC = () => {
                                 color="success"
                                 variant="outlined"
                               />
+                              {question.knowledgePoint && (
+                                <Chip
+                                  label={question.knowledgePoint}
+                                  size="small"
+                                  color="secondary"
+                                  variant="outlined"
+                                />
+                              )}
                             </Box>
                           </Box>
                         }
                       />
                     </ListItem>
-                    {index < selectedPaper.questions.length - 1 && <Divider />}
+                    {index < selectedPaper.questions.length - 1 && <Divider sx={{ my: 1 }} />}
                   </React.Fragment>
                 ))}
               </List>

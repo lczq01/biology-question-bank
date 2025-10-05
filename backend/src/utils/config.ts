@@ -12,8 +12,7 @@ export const config: IAppConfig = {
   database: {
     uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/biology_question_bank',
     options: {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
+      // 移除已废弃的选项，MongoDB Driver 4.0+ 已默认启用
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000

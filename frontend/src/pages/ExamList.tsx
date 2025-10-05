@@ -8,8 +8,10 @@ import {
   Play, 
   Calendar,
   Filter,
-  Search
+  Search,
+  Loader
 } from 'lucide-react';
+import { examAPI } from '../utils/api';
 
 interface ExamSession {
   _id: string;
@@ -38,6 +40,7 @@ const ExamList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [startingExam, setStartingExam] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAvailablePapers();
@@ -45,20 +48,9 @@ const ExamList: React.FC = () => {
 
   const fetchAvailablePapers = async () => {
     try {
-      // 使用mock认证token
-      const response = await fetch('http://localhost:3001/api/exam-sessions?limit=50', {
-        headers: {
-          'Authorization': 'Bearer mock-token-admin'
-        }
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('获取考试会话列表:', result);
-        setExamSessions(result.data?.sessions || []);
-      } else {
-        console.error('获取考试列表失败');
-      }
+      const result = await examAPI.getAvailableExamSessions({ limit: 50 });
+      console.log('获取可参与考试列表:', result);
+      setExamSessions(result.data?.sessions || []);
     } catch (error) {
       console.error('获取考试列表失败:', error);
     } finally {
@@ -68,37 +60,71 @@ const ExamList: React.FC = () => {
 
   const handleStartExam = async (sessionId: string) => {
     try {
-      // 这里应该调用开始考试的API，暂时跳转到详情页
+      setStartingExam(sessionId);
+      
+      // 首先尝试加入考试会话
+      try {
+        await examAPI.joinExamSession(sessionId);
+        console.log('成功加入考试会话');
+      } catch (joinError: any) {
+        // 如果已经加入过，继续执行开始考试
+        if (!joinError.response?.data?.message?.includes('已经加入')) {
+          throw joinError;
+        }
+      }
+      
+      // 开始考试
+      const startResult = await examAPI.startExam(sessionId);
+      console.log('开始考试成功:', startResult);
+      
+      // 跳转到考试页面
       navigate(`/exam-taking/${sessionId}`);
-    } catch (error) {
+      
+    } catch (error: any) {
       console.error('开始考试失败:', error);
-      alert('开始考试失败，请重试');
+      
+      // 根据错误类型显示不同的提示信息
+      let errorMessage = '开始考试失败，请重试';
+      
+      if (error.response?.data?.message) {
+        const message = error.response.data.message;
+        if (message.includes('考试尚未开始')) {
+          errorMessage = '考试尚未开始，请等待考试开始时间';
+        } else if (message.includes('考试已结束')) {
+          errorMessage = '考试已结束，无法参加';
+        } else if (message.includes('考试已经开始')) {
+          errorMessage = '您已经开始了这场考试，正在跳转...';
+          // 如果已经开始，直接跳转
+          navigate(`/exam-taking/${sessionId}`);
+          return;
+        } else if (message.includes('超过最大尝试次数')) {
+          errorMessage = '您已超过最大尝试次数，无法再次参加考试';
+        } else {
+          errorMessage = message;
+        }
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setStartingExam(null);
     }
   };
 
   const handleViewDetails = async (sessionId: string) => {
     try {
-      // 查看考试详情
-      const response = await fetch(`http://localhost:3001/api/exam-sessions/${sessionId}`, {
-        headers: {
-          'Authorization': 'Bearer mock-token-admin'
-        }
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('考试详情:', result);
-        // 可以显示详情对话框或跳转到详情页
-        alert(`考试详情:
+      const result = await examAPI.getStudentExamSessionDetails(sessionId);
+      console.log('考试详情:', result);
+      
+      // 可以显示详情对话框或跳转到详情页
+      alert(`考试详情:
 标题: ${result.data.name}
 状态: ${result.data.status}
-参与人数: ${result.data.participants?.length || 0}`);
-      } else {
-        alert('获取考试详情失败');
-      }
-    } catch (error) {
+参与人数: ${result.data.participants?.length || 0}
+开始时间: ${new Date(result.data.startTime).toLocaleString('zh-CN')}
+结束时间: ${new Date(result.data.endTime).toLocaleString('zh-CN')}`);
+    } catch (error: any) {
       console.error('获取考试详情失败:', error);
-      alert('获取考试详情失败，请重试');
+      alert(error.response?.data?.message || '获取考试详情失败，请重试');
     }
   };
 
@@ -289,10 +315,24 @@ const ExamList: React.FC = () => {
                         </button>
                         <button
                           onClick={() => handleStartExam(session._id)}
-                          className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-1 text-sm font-medium"
+                          disabled={startingExam === session._id}
+                          className={`py-2 px-4 rounded-lg transition-colors flex items-center justify-center space-x-1 text-sm font-medium ${
+                            startingExam === session._id
+                              ? 'bg-gray-400 text-white cursor-not-allowed'
+                              : 'bg-blue-600 text-white hover:bg-blue-700'
+                          }`}
                         >
-                          <Play className="h-4 w-4" />
-                          <span>开始考试</span>
+                          {startingExam === session._id ? (
+                            <>
+                              <Loader className="h-4 w-4 animate-spin" />
+                              <span>开始中...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Play className="h-4 w-4" />
+                              <span>开始考试</span>
+                            </>
+                          )}
                         </button>
                       </div>
                     </div>

@@ -43,7 +43,7 @@ interface ExamData {
 }
 
 const ExamTaking: React.FC = () => {
-  const { examId } = useParams<{ examId: string }>();
+  const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
   
   const [exam, setExam] = useState<ExamData | null>(null);
@@ -58,7 +58,7 @@ const ExamTaking: React.FC = () => {
   const fetchExamDetails = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/api/exam-sessions/${examId}`, {
+      const response = await fetch(`http://localhost:3001/api/exam-sessions/${sessionId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -86,16 +86,16 @@ const ExamTaking: React.FC = () => {
       } else {
         const error = await response.json();
         alert(error.message || '获取考试详情失败');
-        navigate('/exam');
+        navigate('/exam-list');
       }
     } catch (error) {
       console.error('获取考试详情失败:', error);
       alert('获取考试详情失败，请重试');
-      navigate('/exam');
+      navigate('/exam-list');
     } finally {
       setLoading(false);
     }
-  }, [examId, navigate]);
+  }, [sessionId, navigate]);
 
   // 自动保存答案
   const autoSaveAnswer = useCallback(async (questionId: string, answer: string | string[]) => {
@@ -146,20 +146,25 @@ const ExamTaking: React.FC = () => {
     setSubmitting(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3001/api/exam-sessions/submit', {
+      
+      // 使用新的考试结果API
+      const response = await fetch('http://localhost:3001/api/exam/complete', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          examId: exam._id
+          recordId: exam._id
         })
       });
 
       if (response.ok) {
         const result = await response.json();
-        navigate(`/exam/result/${exam._id}`);
+        // 跳转到考试结果页面
+        navigate(`/exam/result/${exam._id}`, { 
+          state: { examResult: result.data } 
+        });
       } else {
         const error = await response.json();
         alert(error.message || '提交考试失败');
@@ -192,10 +197,10 @@ const ExamTaking: React.FC = () => {
 
   // 初始化
   useEffect(() => {
-    if (examId) {
+    if (sessionId) {
       fetchExamDetails();
     }
-  }, [examId, fetchExamDetails]);
+  }, [sessionId, fetchExamDetails]);
 
   // 格式化时间
   const formatTime = (seconds: number) => {

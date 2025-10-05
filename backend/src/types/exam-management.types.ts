@@ -12,6 +12,7 @@ export interface ICreateExamSessionRequest {
   startTime: string;              // 开始时间 (ISO string)
   endTime: string;                // 结束时间 (ISO string)
   duration: number;               // 考试时长（分钟）
+  status?: ExamSessionStatus;     // 考试状态（可选，默认为draft）
   settings?: {                    // 考试设置
     allowReview?: boolean;        // 允许查看答案
     shuffleQuestions?: boolean;   // 随机题目顺序
