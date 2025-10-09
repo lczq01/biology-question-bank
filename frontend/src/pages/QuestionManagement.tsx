@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useExamBasket } from '../contexts/ExamBasketContext';
 import ExamBasket from '../components/ExamBasket';
 import SafeHtmlRenderer from '../components/SafeHtmlRenderer';
@@ -46,6 +46,7 @@ interface Question {
 
 const QuestionManagement: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth();
   const { addToBasket } = useExamBasket();
 
@@ -199,6 +200,8 @@ const QuestionManagement: React.FC = () => {
       console.error('获取章节失败:', error);
     }
   };
+
+
 
   useEffect(() => {
     fetchQuestions();
@@ -407,7 +410,9 @@ const QuestionManagement: React.FC = () => {
             >
               ←
             </button>
-            <h1 className="text-2xl font-bold">题目管理</h1>
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl font-bold">题目管理</h1>
+            </div>
           </div>
           <div className="flex items-center space-x-4">
             <span className="text-green-100">欢迎, {user?.username}</span>
@@ -849,7 +854,7 @@ const QuestionManagement: React.FC = () => {
                       }}
                       className="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition-colors whitespace-nowrap"
                     >
-                      添加到试题篮
+                      添加到考试试题篮
                     </button>
                     
                     <button

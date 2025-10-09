@@ -13,11 +13,6 @@ import {
   MenuItem,
   Alert,
   Chip,
-  Divider,
-  Paper,
-  FormControlLabel,
-  Switch,
-  InputAdornment,
   Table,
   TableBody,
   TableCell,
@@ -26,11 +21,6 @@ import {
   TableRow,
   IconButton,
   Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Collapse,
   Checkbox,
   Menu,
   ListItemIcon,
@@ -39,36 +29,16 @@ import {
   Stack
 } from '@mui/material';
 import {
-  Schedule as TimeIcon,
   Assignment as AssignmentIcon,
-  Grade as GradeIcon,
-  QuestionAnswer as QuestionIcon,
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
-  PlayArrow as PlayIcon,
-  Pause as PauseIcon,
-  Stop as StopIcon,
   Drafts as DraftIcon,
-  Publish as PublishIcon,
-  MoreVert as MoreVertIcon,
-  CheckCircle as CheckCircleIcon,
-  RadioButtonUnchecked as RadioButtonUncheckedIcon
+  Publish as PublishIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-
-interface ExamPaper {
-  id: string;
-  title: string;
-  questions: any[];
-  totalPoints: number;
-  totalQuestions: number;
-  type: string;
-  createdAt: string;
-}
+import { examAPI } from '../utils/api';
 
 interface ExamSession {
   _id: string;
@@ -93,33 +63,16 @@ interface ExamSession {
   createdBy: string;
 }
 
-interface ExamFormData {
-  title: string;
-  description: string;
-  examPaperId: string;
-  duration: number;
-  startTime: string;
-  endTime: string;
-  maxAttempts: number;
-  isTimed: boolean;
-  shuffleQuestions: boolean;
-  showResults: boolean;
-  passingScore: number;
-}
-
 const ExamManagement: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   
   // 状态管理
-  const [examPapers, setExamPapers] = useState<ExamPaper[]>([]);
   const [examSessions, setExamSessions] = useState<ExamSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingSession, setEditingSession] = useState<ExamSession | null>(null);
+
   const [selectedSessions, setSelectedSessions] = useState<string[]>([]);
   const [statusMenuAnchor, setStatusMenuAnchor] = useState<null | HTMLElement>(null);
   const [batchStatusMenuAnchor, setBatchStatusMenuAnchor] = useState<null | HTMLElement>(null);
@@ -136,125 +89,39 @@ const ExamManagement: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  const [formData, setFormData] = useState<ExamFormData>({
-    title: '',
-    description: '',
-    examPaperId: '',
-    duration: 60,
-    startTime: '',
-    endTime: '',
-    maxAttempts: 1,
-    isTimed: true,
-    shuffleQuestions: true,
-    showResults: true,
-    passingScore: 60
-  });
-
-  const [selectedPaper, setSelectedPaper] = useState<ExamPaper | null>(null);
-
-  // 编辑表单数据
-  const [editFormData, setEditFormData] = useState<ExamFormData>({
-    title: '',
-    description: '',
-    examPaperId: '',
-    duration: 60,
-    startTime: '',
-    endTime: '',
-    maxAttempts: 1,
-    isTimed: true,
-    shuffleQuestions: true,
-    showResults: true,
-    passingScore: 60
-  });
 
 
 
-  // 简化的考试状态选项 - 只显示两个状态给管理员
-  const statusOptions = [
-    { value: 'draft', label: '未发布', icon: <DraftIcon />, color: 'default' },
-    { value: 'published', label: '已发布', icon: <PublishIcon />, color: 'primary' }
-  ];
 
-  // 获取试卷列表
-  const fetchExamPapers = async () => {
-    try {
-      // 直接使用mock token，不检查登录状态
-      
-      const response = await fetch('http://localhost:3001/api/exam-paper/list', {
-        headers: {
-          'Authorization': `Bearer mock-token-admin`
-        }
-      });
 
-      const result = await response.json();
 
-      if (result.success) {
-        setExamPapers(result.data || []);
-      } else {
-        setError(result.message || '获取试卷列表失败');
-      }
-    } catch (error) {
-      console.error('获取试卷列表失败:', error);
-      setError('获取试卷列表失败，请稍后重试');
-    }
-  };
+
+
+
 
   // 获取考试会话列表
   const fetchExamSessions = async () => {
     try {
-      // 直接使用mock token，不检查登录状态
+      setLoading(true);
+      const result = await examAPI.getExamSessions({ limit: 50 });
       
-      const response = await fetch('http://localhost:3001/api/exam-sessions?limit=50', {
-        headers: {
-          'Authorization': `Bearer mock-token-admin`
-        }
-      });
-
-      const result = await response.json();
-
       if (result.success) {
         setExamSessions(result.data?.sessions || []);
+        setError(null);
       } else {
         setError(result.message || '获取考试列表失败');
       }
     } catch (error) {
       console.error('获取考试列表失败:', error);
       setError('获取考试列表失败，请稍后重试');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // 初始化数据
-  const initializeData = async () => {
-    setLoading(true);
-    await Promise.all([fetchExamPapers(), fetchExamSessions()]);
-    setLoading(false);
-  };
 
-  // 处理表单变化
-  const handleInputChange = (field: keyof ExamFormData) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const value = event.target.value;
-    setFormData(prev => ({
-      ...prev,
-      [field]: field === 'duration' || field === 'maxAttempts' || field === 'passingScore' 
-        ? parseInt(value) || 0 
-        : value
-    }));
-  };
 
-  // 处理开关变化
-  const handleSwitchChange = (field: keyof ExamFormData) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: event.target.checked
-    }));
-  };
 
-  // 处理试卷选择
-  const handlePaperSelect = (paperId: string) => {
-    setFormData(prev => ({ ...prev, examPaperId: paperId }));
-    const paper = examPapers.find(p => p.id === paperId);
-    setSelectedPaper(paper || null);
-  };
 
   // 处理状态更新
   const handleStatusChange = async (examId: string, newStatus: string) => {
@@ -263,16 +130,7 @@ const ExamManagement: React.FC = () => {
       // 后端期望小写状态值
       const backendStatus = newStatus.toLowerCase();
       
-      const response = await fetch(`http://localhost:3001/api/exam-sessions/${examId}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer mock-token-admin`
-        },
-        body: JSON.stringify({ status: backendStatus })
-      });
-
-      const result = await response.json();
+      const result = await examAPI.updateExamSessionStatus(examId, backendStatus);
 
       if (result.success) {
         // 更新本地状态
@@ -283,10 +141,8 @@ const ExamManagement: React.FC = () => {
         ));
         setSuccess(result.message || '状态更新成功');
         setError(null);
-        console.log('状态更新成功:', result.message);
       } else {
         setError(result.message || '状态更新失败');
-        console.error('状态更新失败:', result.message);
       }
     } catch (error) {
       console.error('状态更新错误:', error);
@@ -298,114 +154,9 @@ const ExamManagement: React.FC = () => {
     }
   };
 
-  // 获取简化的状态显示信息 - 将后端多状态映射到前端两状态
-  const getStatusInfo = (status: string) => {
-    const normalizedStatus = status.toLowerCase();
-    
-    // 将后端的多个状态映射到前端的两个状态
-    if (normalizedStatus === 'draft') {
-      return { label: '未发布', color: 'default' as const };
-    } else {
-      // published, active, completed, expired, cancelled 都显示为"已发布"
-      return { label: '已发布', color: 'success' as const };
-    }
-  };
 
-  // 简化的状态转换逻辑 - 只允许发布和取消发布
-  const getAvailableStatusTransitions = (currentStatus: string) => {
-    const normalizedStatus = currentStatus.toLowerCase();
-    
-    if (normalizedStatus === 'draft') {
-      // 未发布状态可以发布
-      return ['published'];
-    } else {
-      // 已发布状态可以取消发布（回到草稿）
-      return ['draft'];
-    }
-  };
 
-  // 提交表单
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    
-    if (!formData.title.trim()) {
-      setError('请输入考试标题');
-      return;
-    }
 
-    if (!formData.examPaperId) {
-      setError('请选择试卷');
-      return;
-    }
-
-    if (formData.isTimed && formData.duration <= 0) {
-      setError('考试时长必须大于0分钟');
-      return;
-    }
-
-    try {
-      // 自动计算结束时间
-      const startTime = new Date(formData.startTime);
-      const endTime = new Date(startTime.getTime() + formData.duration * 60 * 1000);
-      
-      const examSessionData = {
-        name: formData.title,
-        description: formData.description,
-        paperId: formData.examPaperId,
-        startTime: formData.startTime,
-        endTime: endTime.toISOString(),
-        duration: formData.duration,
-        maxAttempts: formData.maxAttempts,
-        settings: {
-          allowReview: formData.showResults,
-          shuffleQuestions: formData.shuffleQuestions,
-          showResults: formData.showResults
-        }
-      };
-
-      // 直接使用mock token，不检查登录状态
-      const response = await fetch('http://localhost:3001/api/exam-sessions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer mock-token-admin`
-        },
-        body: JSON.stringify(examSessionData)
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setSuccess('考试创建成功！');
-        setError(null);
-        
-        // 清空表单
-        setFormData({
-          title: '',
-          description: '',
-          examPaperId: '',
-          duration: 60,
-          startTime: '',
-          endTime: '',
-          maxAttempts: 1,
-          isTimed: true,
-          shuffleQuestions: true,
-          showResults: true,
-          passingScore: 60
-        });
-        setSelectedPaper(null);
-        setShowCreateForm(false);
-        
-        // 刷新考试列表
-        fetchExamSessions();
-      } else {
-        setError(result.message || '创建考试失败');
-      }
-    } catch (error) {
-      console.error('创建考试失败:', error);
-      setError('创建考试失败，请稍后重试');
-    }
-  };
 
 
 
@@ -416,15 +167,7 @@ const ExamManagement: React.FC = () => {
     }
 
     try {
-      // 直接使用mock token，不检查登录状态
-      const response = await fetch(`http://localhost:3001/api/exam-sessions/${sessionId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer mock-token-admin`
-        }
-      });
-
-      const result = await response.json();
+      const result = await examAPI.deleteExamSession(sessionId);
 
       if (result.success) {
         setSuccess('考试删除成功');
@@ -439,74 +182,7 @@ const ExamManagement: React.FC = () => {
     }
   };
 
-  // 编辑考试
-  const handleEditSession = (session: ExamSession) => {
-    setEditingSession(session);
-    setEditFormData({
-      title: session.name,
-      description: session.description || '',
-      examPaperId: session.paperId?._id || '',
-      duration: session.duration,
-      startTime: new Date(session.startTime).toISOString().slice(0, 16),
-      endTime: new Date(session.endTime).toISOString().slice(0, 16),
-      maxAttempts: session.settings.maxAttempts,
-      isTimed: true,
-      shuffleQuestions: session.settings.shuffleQuestions || false,
-      showResults: session.settings.showResults || false,
-      passingScore: 60
-    });
-    setEditDialogOpen(true);
-  };
 
-  // 保存编辑
-  const handleSaveEdit = async () => {
-    if (!editingSession) return;
-
-    try {
-      // 计算结束时间
-      const startDate = new Date(editFormData.startTime);
-      const endDate = new Date(startDate.getTime() + editFormData.duration * 60 * 1000);
-      
-      const updateData = {
-        name: editFormData.title,
-        description: editFormData.description,
-        paperId: editFormData.examPaperId,
-        startTime: editFormData.startTime,
-        endTime: endDate.toISOString(), // 使用计算出的结束时间
-        duration: editFormData.duration,
-        settings: {
-          maxAttempts: editFormData.maxAttempts,
-          allowReview: editFormData.showResults,
-          shuffleQuestions: editFormData.shuffleQuestions,
-          showResults: editFormData.showResults
-        }
-      };
-
-      const response = await fetch(`http://localhost:3001/api/exam-sessions/${editingSession._id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer mock-token-admin`
-        },
-        body: JSON.stringify(updateData)
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setSuccess('考试更新成功！');
-        setError(null);
-        setEditDialogOpen(false);
-        setEditingSession(null);
-        fetchExamSessions();
-      } else {
-        setError(result.message || '更新考试失败');
-      }
-    } catch (error) {
-      console.error('更新考试失败:', error);
-      setError('更新考试失败，请稍后重试');
-    }
-  };
 
 
 
@@ -518,19 +194,7 @@ const ExamManagement: React.FC = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/exam-sessions/batch-status', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer mock-token-admin`
-        },
-        body: JSON.stringify({ 
-          sessionIds: selectedSessions,
-          status: newStatus 
-        })
-      });
-
-      const result = await response.json();
+      const result = await examAPI.batchUpdateExamSessionStatus(selectedSessions, newStatus);
 
       if (result.success) {
         setSuccess(`已批量更新 ${selectedSessions.length} 个考试的状态`);
@@ -561,16 +225,11 @@ const ExamManagement: React.FC = () => {
     try {
       setLoading(true);
       const promises = selectedSessions.map(sessionId =>
-        fetch(`http://localhost:3001/api/exam-sessions/${sessionId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer mock-token-admin`
-          }
-        })
+        examAPI.deleteExamSession(sessionId)
       );
 
       const results = await Promise.all(promises);
-      const failedCount = results.filter(result => !result.ok).length;
+      const failedCount = results.filter(result => !result.success).length;
       
       if (failedCount === 0) {
         setSuccess(`成功删除 ${selectedSessions.length} 个考试`);
@@ -619,24 +278,7 @@ const ExamManagement: React.FC = () => {
     }
   };
 
-  // 处理编辑表单变化
-  const handleEditInputChange = (field: keyof ExamFormData) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const value = event.target.value;
-    setEditFormData(prev => ({
-      ...prev,
-      [field]: field === 'duration' || field === 'maxAttempts' || field === 'passingScore' 
-        ? parseInt(value) || 0 
-        : value
-    }));
-  };
 
-  // 处理编辑开关变化
-  const handleEditSwitchChange = (field: keyof ExamFormData) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    setEditFormData(prev => ({
-      ...prev,
-      [field]: event.target.checked
-    }));
-  };
 
 
 
@@ -754,29 +396,10 @@ const ExamManagement: React.FC = () => {
   };
 
   useEffect(() => {
-    initializeData();
+    fetchExamSessions();
   }, []);
 
-  // 设置默认开始和结束时间
-  useEffect(() => {
-    const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    if (!formData.startTime) {
-      setFormData(prev => ({
-        ...prev,
-        startTime: now.toISOString().slice(0, 16)
-      }));
-    }
-    
-    if (!formData.endTime) {
-      setFormData(prev => ({
-        ...prev,
-        endTime: tomorrow.toISOString().slice(0, 16)
-      }));
-    }
-  }, []);
+
 
   if (loading) {
     return (
@@ -965,7 +588,7 @@ const ExamManagement: React.FC = () => {
             <Button
               variant="contained"
               startIcon={<AddIcon />}
-              onClick={() => setShowCreateForm(!showCreateForm)}
+              onClick={() => navigate('/exam-creation')}
               sx={{
                 background: 'linear-gradient(135deg, #4caf50, #66bb6a)',
                 '&:hover': {
@@ -973,7 +596,39 @@ const ExamManagement: React.FC = () => {
                 }
               }}
             >
-              {showCreateForm ? '取消创建' : '创建新考试'}
+              创建新考试
+            </Button>
+            
+            <Button
+              variant="outlined"
+              startIcon={<AssignmentIcon />}
+              onClick={() => navigate('/questions?source=exam')}
+              sx={{
+                borderColor: '#2196f3',
+                color: '#2196f3',
+                '&:hover': {
+                  borderColor: '#1976d2',
+                  backgroundColor: 'rgba(33, 150, 243, 0.04)'
+                }
+              }}
+            >
+              手动组卷
+            </Button>
+            
+            <Button
+              variant="outlined"
+              startIcon={<AssignmentIcon />}
+              onClick={() => navigate('/exam-paper-generation')}
+              sx={{
+                borderColor: '#ff9800',
+                color: '#ff9800',
+                '&:hover': {
+                  borderColor: '#f57c00',
+                  backgroundColor: 'rgba(255, 152, 0, 0.04)'
+                }
+              }}
+            >
+              自动组卷
             </Button>
           </Box>
         </Box>
@@ -990,145 +645,7 @@ const ExamManagement: React.FC = () => {
           </Alert>
         )}
 
-        {/* 创建考试表单 */}
-        <Collapse in={showCreateForm}>
-          <Card sx={{ mb: 4, border: '2px solid #4caf50' }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                <AssignmentIcon sx={{ mr: 1, color: '#4caf50' }} />
-                <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#333' }}>
-                  创建新考试
-                </Typography>
-              </Box>
 
-              <form onSubmit={handleSubmit}>
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
-                  {/* 左侧基本信息 */}
-                  <Box>
-                    <TextField
-                      fullWidth
-                      label="考试标题"
-                      value={formData.title}
-                      onChange={handleInputChange('title')}
-                      margin="normal"
-                      required
-                      placeholder="请输入考试标题"
-                    />
-                    
-
-
-                    <FormControl fullWidth margin="normal" required>
-                      <InputLabel>选择试卷</InputLabel>
-                      <Select
-                        value={formData.examPaperId}
-                        onChange={(e) => handlePaperSelect(e.target.value)}
-                        label="选择试卷"
-                      >
-                        {examPapers.map((paper) => (
-                          <MenuItem key={paper.id} value={paper.id}>
-                            {paper.title} ({paper.totalQuestions}题, {paper.totalPoints}分)
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Box>
-
-                  {/* 右侧设置 */}
-                  <Box>
-                    <TextField
-                      fullWidth
-                      label="考试时长（分钟）"
-                      type="number"
-                      value={formData.duration}
-                      onChange={handleInputChange('duration')}
-                      margin="normal"
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <TimeIcon />
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
-
-                    <TextField
-                      fullWidth
-                      label="最大尝试次数"
-                      type="number"
-                      value={formData.maxAttempts}
-                      onChange={handleInputChange('maxAttempts')}
-                      margin="normal"
-                    />
-
-                    <TextField
-                      fullWidth
-                      label="考试开始时间"
-                      type="datetime-local"
-                      value={formData.startTime}
-                      onChange={handleInputChange('startTime')}
-                      margin="normal"
-                      InputLabelProps={{ shrink: true }}
-                    />
-
-                    {/* 显示自动计算的结束时间 */}
-                    {formData.startTime && formData.duration > 0 && (
-                      <Box sx={{ mt: 2, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          <strong>考试结束时间：</strong>
-                          {(() => {
-                            const startTime = new Date(formData.startTime);
-                            const endTime = new Date(startTime.getTime() + formData.duration * 60 * 1000);
-                            return endTime.toLocaleString('zh-CN');
-                          })()}
-                        </Typography>
-                      </Box>
-                    )}
-                  </Box>
-                </Box>
-
-                {/* 考试选项 */}
-                <Box sx={{ mt: 3, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={formData.shuffleQuestions}
-                        onChange={handleSwitchChange('shuffleQuestions')}
-                      />
-                    }
-                    label="题目随机排序"
-                  />
-
-
-                </Box>
-
-                <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    size="large"
-                    sx={{
-                      background: 'linear-gradient(135deg, #4caf50, #66bb6a)',
-                      '&:hover': {
-                        background: 'linear-gradient(135deg, #388e3c, #4caf50)'
-                      }
-                    }}
-                  >
-                    创建考试
-                  </Button>
-                  
-                  <Button
-                    variant="outlined"
-                    size="large"
-                    onClick={() => setShowCreateForm(false)}
-                    sx={{ borderColor: '#666', color: '#666' }}
-                  >
-                    取消
-                  </Button>
-                </Box>
-              </form>
-            </CardContent>
-          </Card>
-        </Collapse>
 
         {/* 考试列表 */}
         <Card>
@@ -1224,15 +741,6 @@ const ExamManagement: React.FC = () => {
                           </TableCell>
                           <TableCell>
                             <Box sx={{ display: 'flex', gap: 1 }}>
-                              <Tooltip title="编辑考试">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => handleEditSession(session)}
-                                  sx={{ color: '#2196f3' }}
-                                >
-                                  <EditIcon />
-                                </IconButton>
-                              </Tooltip>
                               <Tooltip title="删除考试">
                                 <IconButton
                                   size="small"
@@ -1304,121 +812,7 @@ const ExamManagement: React.FC = () => {
 
 
 
-        {/* 编辑考试对话框 */}
-        <Dialog
-          open={editDialogOpen}
-          onClose={() => setEditDialogOpen(false)}
-          maxWidth="md"
-          fullWidth
-        >
-          <DialogTitle sx={{ 
-            background: 'linear-gradient(135deg, #2196f3, #42a5f5)',
-            color: 'white',
-            fontWeight: 'bold'
-          }}>
-            编辑考试
-          </DialogTitle>
-          
-          <DialogContent sx={{ mt: 2 }}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
-              {/* 左侧基本信息 */}
-              <Box>
-                <TextField
-                  fullWidth
-                  label="考试标题"
-                  value={editFormData.title}
-                  onChange={handleEditInputChange('title')}
-                  margin="normal"
-                  required
-                />
-                
 
-
-                <FormControl fullWidth margin="normal" required>
-                  <InputLabel>选择试卷</InputLabel>
-                  <Select
-                    value={editFormData.examPaperId}
-                    onChange={(e) => setEditFormData(prev => ({ ...prev, examPaperId: e.target.value }))}
-                    label="选择试卷"
-                  >
-                    {examPapers.map((paper) => (
-                      <MenuItem key={paper.id} value={paper.id}>
-                        {paper.title} ({paper.totalQuestions}题, {paper.totalPoints}分)
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-
-              {/* 右侧设置 */}
-              <Box>
-                <TextField
-                  fullWidth
-                  label="考试时长（分钟）"
-                  type="number"
-                  value={editFormData.duration}
-                  onChange={handleEditInputChange('duration')}
-                  margin="normal"
-                />
-
-                <TextField
-                  fullWidth
-                  label="最大尝试次数"
-                  type="number"
-                  value={editFormData.maxAttempts}
-                  onChange={handleEditInputChange('maxAttempts')}
-                  margin="normal"
-                />
-
-                <TextField
-                  fullWidth
-                  label="考试开始时间"
-                  type="datetime-local"
-                  value={editFormData.startTime}
-                  onChange={handleEditInputChange('startTime')}
-                  margin="normal"
-                  InputLabelProps={{ shrink: true }}
-                />
-
-                {/* 显示自动计算的结束时间 */}
-                {editFormData.startTime && editFormData.duration > 0 && (
-                  <Box sx={{ mt: 2, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      <strong>考试结束时间：</strong>
-                      {(() => {
-                        const startTime = new Date(editFormData.startTime);
-                        const endTime = new Date(startTime.getTime() + editFormData.duration * 60 * 1000);
-                        return endTime.toLocaleString('zh-CN');
-                      })()}
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
-            </Box>
-
-            {/* 考试选项 */}
-            <Box sx={{ mt: 3, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={editFormData.shuffleQuestions}
-                    onChange={handleEditSwitchChange('shuffleQuestions')}
-                  />
-                }
-                label="题目随机排序"
-              />
-            </Box>
-          </DialogContent>
-          
-          <DialogActions>
-            <Button onClick={() => setEditDialogOpen(false)} color="inherit">
-              取消
-            </Button>
-            <Button onClick={handleSaveEdit} color="primary" variant="contained">
-              保存更改
-            </Button>
-          </DialogActions>
-        </Dialog>
 
         {/* 简化的状态更新菜单 */}
         <Menu
@@ -1426,30 +820,26 @@ const ExamManagement: React.FC = () => {
           open={Boolean(statusMenuAnchor)}
           onClose={() => setStatusMenuAnchor(null)}
         >
-          {currentSessionForStatus && (() => {
-            const currentSession = examSessions.find(s => s._id === currentSessionForStatus);
-            const currentStatus = currentSession?.status.toLowerCase();
-            const availableTransitions = getAvailableStatusTransitions(currentStatus || '');
-            
-            return availableTransitions.map((targetStatus) => {
-              const statusOption = statusOptions.find(opt => opt.value === targetStatus);
-              if (!statusOption) return null;
-              
-              return (
-                <MenuItem
-                  key={statusOption.value}
-                  onClick={() => handleStatusChange(currentSessionForStatus, statusOption.value)}
-                >
-                  <ListItemIcon>
-                    {statusOption.icon}
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary={currentStatus === 'draft' ? '发布考试' : '取消发布'}
-                  />
-                </MenuItem>
-              );
-            });
-          })()}
+          {currentSessionForStatus && (
+            <>
+              <MenuItem
+                onClick={() => handleStatusChange(currentSessionForStatus, 'published')}
+              >
+                <ListItemIcon>
+                  <PublishIcon />
+                </ListItemIcon>
+                <ListItemText primary="发布考试" />
+              </MenuItem>
+              <MenuItem
+                onClick={() => handleStatusChange(currentSessionForStatus, 'draft')}
+              >
+                <ListItemIcon>
+                  <DraftIcon />
+                </ListItemIcon>
+                <ListItemText primary="取消发布" />
+              </MenuItem>
+            </>
+          )}
         </Menu>
 
         {/* 简化的批量状态更新菜单 */}

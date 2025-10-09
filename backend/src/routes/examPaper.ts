@@ -107,7 +107,7 @@ router.post('/generate/preset/:presetName', async (req, res) => {
   }
 });
 
-// 使用自定义配置生成试卷
+// 使用自定义配置生成试卷（基于筛选条件的随机抽题）
 router.post('/generate/custom', async (req, res) => {
   try {
     const { config, title, createdBy } = req.body;
@@ -120,7 +120,7 @@ router.post('/generate/custom', async (req, res) => {
       });
     }
 
-    // 获取所有题目用于组卷
+    // 获取所有题目用于筛选
     const questionsResult = await enhancedMockQuestionService.getQuestions(1, 1000, {});
     
     if (!questionsResult.success) {
@@ -130,29 +130,111 @@ router.post('/generate/custom', async (req, res) => {
       });
     }
 
-    // 难度级别映射
-    const difficultyMap: { [key: string]: string } = {
-      '简单': 'easy',
-      '中等': 'medium', 
-      '困难': 'hard'
+    const allQuestions = questionsResult.data?.questions || [];
+    
+    // 根据questionConfigs筛选题目
+    let selectedQuestions: any[] = [];
+    
+    if (config.questionConfigs && Array.isArray(config.questionConfigs)) {
+      for (const qConfig of config.questionConfigs) {
+        // 筛选符合条件的题目
+        let filteredQuestions = allQuestions.filter(q => {
+          // 题型匹配
+          if (qConfig.type && q.type !== qConfig.type) return false;
+          
+          // 难度匹配（处理空难度）
+          if (qConfig.difficulty && qConfig.difficulty !== '' && q.difficulty !== qConfig.difficulty) return false;
+          
+          // 章节匹配（处理空章节）
+          if (qConfig.chapters && qConfig.chapters.length > 0 && !qConfig.chapters.includes(q.chapter)) return false;
+          
+          return true;
+        });
+        
+        // 随机抽取指定数量的题目
+        const shuffled = filteredQuestions.sort(() => Math.random() - 0.5);
+        const selected = shuffled.slice(0, qConfig.count || 1);
+        
+        // 设置每题分值
+        const questionsWithPoints = selected.map(q => ({
+          ...q,
+          points: qConfig.pointsPerQuestion || 5
+        }));
+        
+        selectedQuestions.push(...questionsWithPoints);
+      }
+    } else {
+      // 如果没有questionConfigs，使用传统方法
+      const examPaperService = new ExamPaperService(allQuestions);
+      const examPaper = examPaperService.generateWithCustomConfig(
+        config as ExamPaperConfig,
+        createdBy || 'unknown',
+        title
+      );
+      selectedQuestions = examPaper.questions;
+    }
+
+    // 计算总分和总题数
+    const totalQuestions = selectedQuestions.length;
+    const totalPoints = selectedQuestions.reduce((sum, q) => sum + (q.points || 5), 0);
+
+    // 将试卷保存到MongoDB数据库
+    const newPaper = new Paper({
+      title: title || '自动生成试卷',
+      description: '基于筛选条件随机抽取的试卷',
+      type: 'exam',
+      status: 'published',
+      config: {
+        totalQuestions,
+        totalPoints,
+        timeLimit: 120,
+        allowReview: true,
+        shuffleQuestions: true,
+        shuffleOptions: true
+      },
+      questions: selectedQuestions.map((q, index) => ({
+        questionId: new Types.ObjectId(),
+        order: index + 1,
+        points: q.points || 5
+      })),
+      createdBy: new Types.ObjectId('67f8a1b2c3d4e5f6a7b8c9d0'),
+      stats: {
+        totalAttempts: 0,
+        averageScore: 0,
+        passRate: 0
+      }
+    });
+    
+    const savedPaper = await newPaper.save();
+    
+    // 类型转换以访问Mongoose文档属性
+    const paperDoc = savedPaper as any;
+    
+    // 返回试卷数据
+    const responsePaper = {
+      id: paperDoc._id.toString(),
+      title: paperDoc.title,
+      questions: selectedQuestions,
+      totalQuestions,
+      totalPoints,
+      difficultyBreakdown: {
+        简单: selectedQuestions.filter(q => q.difficulty === '简单').length,
+        中等: selectedQuestions.filter(q => q.difficulty === '中等').length,
+        困难: selectedQuestions.filter(q => q.difficulty === '困难').length
+      },
+      typeBreakdown: {
+        single_choice: selectedQuestions.filter(q => q.type === 'single_choice').length,
+        multiple_choice: selectedQuestions.filter(q => q.type === 'multiple_choice').length,
+        fill_blank: selectedQuestions.filter(q => q.type === 'fill_blank').length
+      },
+      createdAt: paperDoc.createdAt.toISOString(),
+      createdBy: createdBy || 'unknown',
+      config: config
     };
-
-    // 转换难度级别为英文
-    const normalizedQuestions = (questionsResult.data?.questions || []).map(q => ({
-      ...q,
-      difficulty: difficultyMap[q.difficulty] || q.difficulty
-    }));
-
-    const examPaperService = new ExamPaperService(normalizedQuestions);
-    const examPaper = examPaperService.generateWithCustomConfig(
-      config as ExamPaperConfig,
-      createdBy || 'unknown',
-      title
-    );
 
     res.json({
       success: true,
-      data: examPaper,
+      data: responsePaper,
       message: '试卷生成成功'
     });
   } catch (error) {

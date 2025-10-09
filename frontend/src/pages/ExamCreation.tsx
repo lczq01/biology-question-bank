@@ -7,109 +7,54 @@ import {
   TextField,
   Button,
   Box,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Alert,
-  Chip,
   Divider,
-  Paper,
   FormControlLabel,
   Switch,
   InputAdornment
 } from '@mui/material';
 import {
   Schedule as TimeIcon,
-  Assignment as AssignmentIcon,
-  Grade as GradeIcon,
-  QuestionAnswer as QuestionIcon,
-  Add as AddIcon
+  Grade as GradeIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
-interface ExamPaper {
-  id: string;
-  title: string;
-  questions: any[];
-  totalPoints: number;
-  totalQuestions: number;
-  type: string;
-  createdAt: string;
-}
-
 interface ExamFormData {
   title: string;
   description: string;
-  examPaperId: string;
   duration: number;
   startTime: string;
   endTime: string;
-  maxAttempts: number;
-  isTimed: boolean;
+  allowRetake: boolean;
   shuffleQuestions: boolean;
-  showResults: boolean;
   passingScore: number;
 }
 
 const ExamCreation: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const [examPapers, setExamPapers] = useState<ExamPaper[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<ExamFormData>({
     title: '',
     description: '',
-    examPaperId: '',
     duration: 60,
     startTime: '',
     endTime: '',
-    maxAttempts: 1,
-    isTimed: true,
+    allowRetake: false,
     shuffleQuestions: true,
-    showResults: true,
     passingScore: 60
   });
-
-  const [selectedPaper, setSelectedPaper] = useState<ExamPaper | null>(null);
-
-  // 获取试卷列表
-  const fetchExamPapers = async () => {
-    try {
-      setLoading(true);
-      // 使用mock认证获取试卷列表
-      const response = await fetch('http://localhost:3001/api/exam-paper/list', {
-        headers: {
-          'Authorization': `Bearer mock-token-admin`
-        }
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setExamPapers(result.data || []);
-        setError(null);
-      } else {
-        setError(result.message || '获取试卷列表失败');
-      }
-    } catch (error) {
-      console.error('获取试卷列表失败:', error);
-      setError('获取试卷列表失败，请稍后重试');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // 处理表单变化
   const handleInputChange = (field: keyof ExamFormData) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const value = event.target.value;
     setFormData(prev => ({
       ...prev,
-      [field]: field === 'duration' || field === 'maxAttempts' || field === 'passingScore' 
+      [field]: field === 'duration' || field === 'passingScore' 
         ? parseInt(value) || 0 
         : value
     }));
@@ -123,13 +68,6 @@ const ExamCreation: React.FC = () => {
     }));
   };
 
-  // 处理试卷选择
-  const handlePaperSelect = (paperId: string) => {
-    setFormData(prev => ({ ...prev, examPaperId: paperId }));
-    const paper = examPapers.find(p => p.id === paperId);
-    setSelectedPaper(paper || null);
-  };
-
   // 提交表单
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -139,13 +77,8 @@ const ExamCreation: React.FC = () => {
       return;
     }
 
-    if (!formData.examPaperId) {
-      setError('请选择试卷');
-      return;
-    }
-
-    if (formData.isTimed && formData.duration <= 0) {
-      setError('考试时长必须大于0分钟');
+    if (formData.duration < 0) {
+      setError('考试时长不能为负数');
       return;
     }
 
@@ -154,15 +87,13 @@ const ExamCreation: React.FC = () => {
       const examSessionData = {
         name: formData.title,  // 后端期望name字段，不是title
         description: formData.description,
-        paperId: formData.examPaperId,
         startTime: formData.startTime,
         endTime: formData.endTime,
         duration: formData.duration,
-        maxAttempts: formData.maxAttempts,
         settings: {
-          allowReview: formData.showResults,
+          allowRetake: formData.allowRetake,
           shuffleQuestions: formData.shuffleQuestions,
-          showResults: formData.showResults
+          passingScore: formData.passingScore
         }
       };
 
@@ -184,17 +115,13 @@ const ExamCreation: React.FC = () => {
         setFormData({
           title: '',
           description: '',
-          examPaperId: '',
           duration: 60,
           startTime: '',
           endTime: '',
-          maxAttempts: 1,
-          isTimed: true,
+          allowRetake: false,
           shuffleQuestions: true,
-          showResults: true,
           passingScore: 60
         });
-        setSelectedPaper(null);
         
         // 3秒后跳转到考试管理页面
         setTimeout(() => {
@@ -215,9 +142,7 @@ const ExamCreation: React.FC = () => {
     navigate('/login');
   };
 
-  useEffect(() => {
-    fetchExamPapers();
-  }, []);
+
 
   // 设置默认开始和结束时间
   useEffect(() => {
@@ -240,18 +165,7 @@ const ExamCreation: React.FC = () => {
     }
   }, []);
 
-  if (loading) {
-    return (
-      <div style={{ minHeight: '100vh', background: 'white' }}>
-        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-          <Typography variant="h4" gutterBottom>
-            创建考试
-          </Typography>
-          <Typography>加载中...</Typography>
-        </Container>
-      </div>
-    );
-  }
+
 
   return (
     <div style={{ minHeight: '100vh', background: 'white' }}>
@@ -260,7 +174,7 @@ const ExamCreation: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <button 
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/exam-management')}
               className="mr-4 p-2 hover:bg-green-600 rounded-lg transition-colors"
             >
               ←
@@ -286,6 +200,8 @@ const ExamCreation: React.FC = () => {
       </div>
 
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+
+
         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
           {/* 左侧表单 */}
           <Box sx={{ width: { xs: '100%', md: '66.666%' } }}>
@@ -329,21 +245,6 @@ const ExamCreation: React.FC = () => {
                     placeholder="请输入考试描述，如：本次考试涵盖细胞生物学和遗传学相关内容"
                   />
 
-                  <FormControl fullWidth margin="normal" required>
-                    <InputLabel>选择试卷</InputLabel>
-                    <Select
-                      value={formData.examPaperId}
-                      onChange={(e) => handlePaperSelect(e.target.value)}
-                      label="选择试卷"
-                    >
-                      {examPapers.map((paper) => (
-                        <MenuItem key={paper.id} value={paper.id}>
-                          {paper.title} ({paper.totalQuestions}题, {paper.totalPoints}分)
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-
                   <Divider sx={{ my: 3 }} />
 
                   <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
@@ -355,11 +256,11 @@ const ExamCreation: React.FC = () => {
                       <FormControlLabel
                         control={
                           <Switch
-                            checked={formData.isTimed}
-                            onChange={handleSwitchChange('isTimed')}
+                            checked={formData.allowRetake}
+                            onChange={handleSwitchChange('allowRetake')}
                           />
                         }
-                        label="限时考试"
+                        label="是否允许重考"
                       />
                     </Box>
                     <Box sx={{ width: { xs: '100%', sm: '48%' } }}>
@@ -373,48 +274,19 @@ const ExamCreation: React.FC = () => {
                         label="题目随机排序"
                       />
                     </Box>
-                    <Box sx={{ width: { xs: '100%', sm: '48%' } }}>
-                      <FormControlLabel
-                        control={
-                          <Switch
-                            checked={formData.showResults}
-                            onChange={handleSwitchChange('showResults')}
-                          />
-                        }
-                        label="显示考试结果"
-                      />
-                    </Box>
                   </Box>
-
-                  {formData.isTimed && (
-                    <TextField
-                      fullWidth
-                      label="考试时长（分钟）"
-                      type="number"
-                      value={formData.duration}
-                      onChange={handleInputChange('duration')}
-                      margin="normal"
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <TimeIcon />
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
-                  )}
 
                   <TextField
                     fullWidth
-                    label="最大尝试次数"
+                    label="考试时长（分钟，0表示不限时）"
                     type="number"
-                    value={formData.maxAttempts}
-                    onChange={handleInputChange('maxAttempts')}
+                    value={formData.duration}
+                    onChange={handleInputChange('duration')}
                     margin="normal"
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
-                          <AddIcon />
+                          <TimeIcon />
                         </InputAdornment>
                       ),
                     }}
@@ -439,22 +311,24 @@ const ExamCreation: React.FC = () => {
 
                   <TextField
                     fullWidth
-                    label="考试开始时间"
+                    label="考试开放时间"
                     type="datetime-local"
                     value={formData.startTime}
                     onChange={handleInputChange('startTime')}
                     margin="normal"
                     InputLabelProps={{ shrink: true }}
+                    helperText="学生可以开始参加考试的时间"
                   />
 
                   <TextField
                     fullWidth
-                    label="考试结束时间"
+                    label="考试关闭时间"
                     type="datetime-local"
                     value={formData.endTime}
                     onChange={handleInputChange('endTime')}
                     margin="normal"
                     InputLabelProps={{ shrink: true }}
+                    helperText="学生不能再开始新考试的时间"
                   />
 
                   <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
@@ -500,69 +374,21 @@ const ExamCreation: React.FC = () => {
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-                  试卷预览
-                </Typography>
-                
-                {selectedPaper ? (
-                  <Paper elevation={2} sx={{ p: 2, bgcolor: '#f8f9fa' }}>
-                    <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
-                      {selectedPaper.title}
-                    </Typography>
-                    
-                    <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
-                      <Chip
-                        icon={<QuestionIcon />}
-                        label={`${selectedPaper.totalQuestions}题`}
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                      />
-                      <Chip
-                        icon={<GradeIcon />}
-                        label={`${selectedPaper.totalPoints}分`}
-                        size="small"
-                        color="success"
-                        variant="outlined"
-                      />
-                      <Chip
-                        label={selectedPaper.type === 'manual' ? '手动组卷' : '自动组卷'}
-                        size="small"
-                        color={selectedPaper.type === 'manual' ? 'secondary' : 'info'}
-                        variant="outlined"
-                      />
-                    </Box>
-                    
-                    <Typography variant="body2" color="text.secondary">
-                      创建时间：{new Date(selectedPaper.createdAt).toLocaleDateString('zh-CN')}
-                    </Typography>
-                  </Paper>
-                ) : (
-                  <Paper elevation={0} sx={{ p: 3, textAlign: 'center', bgcolor: '#f5f5f5' }}>
-                    <AssignmentIcon sx={{ fontSize: 48, color: '#ccc', mb: 2 }} />
-                    <Typography variant="body2" color="text.secondary">
-                      请选择试卷以预览
-                    </Typography>
-                  </Paper>
-                )}
-
-                <Divider sx={{ my: 3 }} />
-
-                <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
                   考试设置预览
                 </Typography>
                 
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                   <Typography variant="body2">
-                    <strong>考试类型：</strong>
-                    {formData.isTimed ? `限时考试（${formData.duration}分钟）` : '不限时考试'}
+                    <strong>考试时长：</strong>
+                    {formData.duration === 0 ? '不限时' : `${formData.duration}分钟`}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>是否允许重考：</strong>
+                    {formData.allowRetake ? '是' : '否'}
                   </Typography>
                   <Typography variant="body2">
                     <strong>题目顺序：</strong>
                     {formData.shuffleQuestions ? '随机排序' : '固定顺序'}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>尝试次数：</strong>
-                    {formData.maxAttempts} 次
                   </Typography>
                   <Typography variant="body2">
                     <strong>及格分数：</strong>
@@ -570,13 +396,13 @@ const ExamCreation: React.FC = () => {
                   </Typography>
                   {formData.startTime && (
                     <Typography variant="body2">
-                      <strong>开始时间：</strong>
+                      <strong>开放时间：</strong>
                       {new Date(formData.startTime).toLocaleString('zh-CN')}
                     </Typography>
                   )}
                   {formData.endTime && (
                     <Typography variant="body2">
-                      <strong>结束时间：</strong>
+                      <strong>关闭时间：</strong>
                       {new Date(formData.endTime).toLocaleString('zh-CN')}
                     </Typography>
                   )}

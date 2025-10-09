@@ -53,6 +53,7 @@ const ExamPaperGeneration: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generatedPaper, setGeneratedPaper] = useState<GeneratedExamPaper | null>(null);
   const [error, setError] = useState<string>('');
+  const [success, setSuccess] = useState<string>('');
   const [availableChapters, setAvailableChapters] = useState<string[]>([]);
   
   // 题目配置列表
@@ -106,8 +107,8 @@ const ExamPaperGeneration: React.FC = () => {
 
   // 添加或更新配置
   const handleAddOrUpdateConfig = () => {
-    if (!currentConfig.type || !currentConfig.difficulty || currentConfig.chapters.length === 0) {
-      setError('请填写完整的配置信息');
+    if (!currentConfig.type) {
+      setError('请选择题型');
       return;
     }
     
@@ -121,18 +122,25 @@ const ExamPaperGeneration: React.FC = () => {
       return;
     }
 
+    // 处理空难度和空章节的情况
+    const configToSave = {
+      ...currentConfig,
+      difficulty: currentConfig.difficulty || '所有难度',
+      chapters: currentConfig.chapters.length === 0 ? ['所有章节'] : currentConfig.chapters
+    };
+
     if (editingId) {
       // 更新现有配置
       setQuestionConfigs(prev => prev.map(config => 
         config.id === editingId 
-          ? { ...currentConfig, id: editingId }
+          ? { ...configToSave, id: editingId }
           : config
       ));
       setEditingId(null);
     } else {
       // 添加新配置
       const newConfig: QuestionConfig = {
-        ...currentConfig,
+        ...configToSave,
         id: Date.now().toString()
       };
       setQuestionConfigs(prev => [...prev, newConfig]);
@@ -185,7 +193,7 @@ const ExamPaperGeneration: React.FC = () => {
     return { totalQuestions, totalPoints };
   };
 
-  // 生成试卷
+  // 生成试卷并创建考试会话
   const handleGenerateExam = async () => {
     if (!examTitle.trim()) {
       setError('请输入试卷标题');
@@ -203,25 +211,58 @@ const ExamPaperGeneration: React.FC = () => {
     try {
       const { totalQuestions, totalPoints } = getTotalStats();
       
-      // 构建难度分布
-      const difficultyDistribution = { easy: 0, medium: 0, hard: 0 };
+      // 构建难度分布 - 转换为百分比格式
+      const difficultyCounts = { 简单: 0, 中等: 0, 困难: 0 };
       questionConfigs.forEach(config => {
-        if (config.difficulty === '简单') difficultyDistribution.easy += config.count;
-        else if (config.difficulty === '中等') difficultyDistribution.medium += config.count;
-        else if (config.difficulty === '困难') difficultyDistribution.hard += config.count;
+        if (config.difficulty === '简单' || config.difficulty === '所有难度') {
+          difficultyCounts.简单 += config.count;
+        }
+        if (config.difficulty === '中等' || config.difficulty === '所有难度') {
+          difficultyCounts.中等 += config.count;
+        }
+        if (config.difficulty === '困难' || config.difficulty === '所有难度') {
+          difficultyCounts.困难 += config.count;
+        }
       });
 
-      // 构建题型分布
-      const typeDistribution = { single_choice: 0, multiple_choice: 0, fill_blank: 0 };
+      // 计算难度分布百分比
+      const difficultyDistribution = {
+        简单: totalQuestions > 0 ? difficultyCounts.简单 / totalQuestions : 0.33,
+        中等: totalQuestions > 0 ? difficultyCounts.中等 / totalQuestions : 0.33,
+        困难: totalQuestions > 0 ? difficultyCounts.困难 / totalQuestions : 0.34
+      };
+
+      // 构建题型分布 - 转换为百分比格式
+      const typeCounts = { single_choice: 0, fill_blank: 0, true_false: 0, essay: 0 };
       questionConfigs.forEach(config => {
-        typeDistribution[config.type as keyof typeof typeDistribution] += config.count;
+        if (typeCounts.hasOwnProperty(config.type)) {
+          typeCounts[config.type as keyof typeof typeCounts] += config.count;
+        }
       });
 
-      // 构建章节列表
-      const chapters = [...new Set(questionConfigs.flatMap(config => config.chapters))];
+      // 计算题型分布百分比
+      const typeDistribution = {
+        single_choice: totalQuestions > 0 ? typeCounts.single_choice / totalQuestions : 0.6,
+        fill_blank: totalQuestions > 0 ? typeCounts.fill_blank / totalQuestions : 0.2,
+        true_false: totalQuestions > 0 ? typeCounts.true_false / totalQuestions : 0.1,
+        essay: totalQuestions > 0 ? typeCounts.essay / totalQuestions : 0.1
+      };
 
-      const url = 'http://localhost:3001/api/exam-paper/generate/custom';
-      const body = {
+      // 构建章节列表 - 过滤掉"所有章节"
+      const chapters = [...new Set(questionConfigs.flatMap(config => 
+        config.chapters.filter(chapter => chapter !== '所有章节')
+      ))];
+
+      // 处理questionConfigs，将"所有难度"和"所有章节"转换为空值
+      const processedQuestionConfigs = questionConfigs.map(config => ({
+        ...config,
+        difficulty: config.difficulty === '所有难度' ? '' : config.difficulty,
+        chapters: config.chapters.filter(chapter => chapter !== '所有章节')
+      }));
+
+      // 第一步：生成试卷
+      const generateUrl = 'http://localhost:3001/api/exam-paper/generate/custom';
+      const generateBody = {
         title: examTitle.trim(),
         createdBy: user?.username || 'unknown',
         config: {
@@ -229,27 +270,66 @@ const ExamPaperGeneration: React.FC = () => {
           totalPoints,
           difficultyDistribution,
           typeDistribution,
-          chapters,
-          questionConfigs // 传递详细的配置信息
+          chapters: chapters.length > 0 ? chapters : undefined,
+          questionConfigs: processedQuestionConfigs
         }
       };
 
-      const response = await fetch(url, {
+      const generateResponse = await fetch(generateUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': 'Bearer mock-token-admin'
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify(generateBody)
       });
 
-      const result = await response.json();
+      const generateResult = await generateResponse.json();
 
-      if (result.success) {
-        setGeneratedPaper(result.data);
+      if (generateResult.success) {
+        const generatedPaper = generateResult.data;
+        setGeneratedPaper(generatedPaper);
         setError('');
+
+        // 第二步：自动创建考试会话
+        const createSessionUrl = 'http://localhost:3001/api/exam-sessions';
+        const sessionBody = {
+          name: `${examTitle.trim()} - 自动生成`,
+          description: `通过自动组卷生成的考试，包含${totalQuestions}道题目，总分${totalPoints}分`,
+          paperId: generatedPaper.id,
+          startTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 明天开始
+          endTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 一周后结束
+          duration: 120, // 2小时
+          settings: {
+            maxAttempts: 1,
+            allowReview: true,
+            shuffleQuestions: true,
+            showResults: true
+          }
+        };
+
+        const sessionResponse = await fetch(createSessionUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer mock-token-admin'
+          },
+          body: JSON.stringify(sessionBody)
+        });
+
+        const sessionResult = await sessionResponse.json();
+
+        if (sessionResult.success) {
+          // 创建成功，导航到考试管理页面
+          setSuccess('试卷生成成功！已自动创建考试会话');
+          setTimeout(() => {
+            navigate('/exam-management');
+          }, 2000);
+        } else {
+          setError(`试卷生成成功，但创建考试会话失败：${sessionResult.message}`);
+        }
       } else {
-        setError(result.message || '生成试卷失败');
+        setError(generateResult.message || '生成试卷失败');
       }
     } catch (err) {
       console.error('生成试卷错误:', err);
@@ -268,12 +348,12 @@ const ExamPaperGeneration: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <button 
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/exam-management')}
               className="mr-4 p-2 hover:bg-green-600 rounded-lg transition-colors"
             >
               ←
             </button>
-            <h1 className="text-2xl font-bold">智能组卷</h1>
+            <h1 className="text-2xl font-bold">自动组卷</h1>
           </div>
           <div className="flex items-center space-x-4">
             <span className="text-green-100">欢迎, {user?.username}</span>
@@ -296,7 +376,7 @@ const ExamPaperGeneration: React.FC = () => {
       <div className="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         {/* 页面标题 */}
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">智能组卷系统</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">自动组卷系统</h2>
           <p className="text-gray-600">灵活配置，精准组卷</p>
         </div>
 
@@ -401,7 +481,7 @@ const ExamPaperGeneration: React.FC = () => {
                     <Button
                       variant="contained"
                       onClick={handleAddOrUpdateConfig}
-                      disabled={!currentConfig.type || !currentConfig.difficulty || currentConfig.chapters.length === 0}
+                      disabled={!currentConfig.type}
                       className="flex-1"
                     >
                       {editingId ? '更新配置' : '添加配置'}
@@ -452,6 +532,13 @@ const ExamPaperGeneration: React.FC = () => {
                   {error && (
                     <div className="p-3 bg-red-50 border border-red-200 rounded-md">
                       <p className="text-red-600 text-sm">{error}</p>
+                    </div>
+                  )}
+
+                  {/* 成功信息 */}
+                  {success && (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+                      <p className="text-green-600 text-sm">{success}</p>
                     </div>
                   )}
 

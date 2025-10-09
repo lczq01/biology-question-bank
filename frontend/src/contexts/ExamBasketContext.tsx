@@ -23,8 +23,12 @@ interface BasketItem {
   points: number;
 }
 
+interface BasketState {
+  examBasket: BasketItem[];
+}
+
 interface ExamBasketContextType {
-  basketItems: BasketItem[];
+  basketState: BasketState;
   addToBasket: (question: Question) => void;
   removeFromBasket: (questionId: string) => void;
   updatePoints: (questionId: string, points: number) => void;
@@ -49,48 +53,71 @@ interface ExamBasketProviderProps {
 }
 
 export const ExamBasketProvider: React.FC<ExamBasketProviderProps> = ({ children }) => {
-  const [basketItems, setBasketItems] = useState<BasketItem[]>([]);
+  const [basketState, setBasketState] = useState<BasketState>({
+    examBasket: []
+  });
+
+  // 获取当前活动的试题篮
+  const getCurrentBasket = () => {
+    return basketState.examBasket;
+  };
 
   const addToBasket = (question: Question) => {
-    setBasketItems(prev => {
+    setBasketState(prev => {
       // 检查是否已存在
-      if (prev.some(item => item.question.id === question.id)) {
+      if (prev.examBasket.some(item => item.question.id === question.id)) {
         return prev;
       }
+      
       // 根据题型设置默认分值
       const defaultPoints = getDefaultPoints(question.type);
-      return [...prev, { question, points: defaultPoints }];
+      const newItem = { question, points: defaultPoints };
+      
+      return {
+        ...prev,
+        examBasket: [...prev.examBasket, newItem]
+      };
     });
   };
 
   const removeFromBasket = (questionId: string) => {
-    setBasketItems(prev => prev.filter(item => item.question.id !== questionId));
+    setBasketState(prev => ({
+      ...prev,
+      examBasket: getCurrentBasket().filter(item => item.question.id !== questionId)
+    }));
   };
 
   const updatePoints = (questionId: string, points: number) => {
-    setBasketItems(prev => 
-      prev.map(item => 
+    setBasketState(prev => ({
+      ...prev,
+      examBasket: getCurrentBasket().map(item => 
         item.question.id === questionId 
           ? { ...item, points } 
           : item
       )
-    );
+    }));
   };
 
   const clearBasket = () => {
-    setBasketItems([]);
+    setBasketState(prev => ({
+      ...prev,
+      examBasket: []
+    }));
   };
 
   const getTotalPoints = () => {
-    return basketItems.reduce((total, item) => total + item.points, 0);
+    const basket = getCurrentBasket();
+    return basket.reduce((total, item) => total + item.points, 0);
   };
 
   const getItemCount = () => {
-    return basketItems.length;
+    const basket = getCurrentBasket();
+    return basket.length;
   };
 
   const isInBasket = (questionId: string) => {
-    return basketItems.some(item => item.question.id === questionId);
+    const basket = getCurrentBasket();
+    return basket.some(item => item.question.id === questionId);
   };
 
   const getDefaultPoints = (type: string) => {
@@ -105,7 +132,7 @@ export const ExamBasketProvider: React.FC<ExamBasketProviderProps> = ({ children
   };
 
   const value: ExamBasketContextType = {
-    basketItems,
+    basketState,
     addToBasket,
     removeFromBasket,
     updatePoints,

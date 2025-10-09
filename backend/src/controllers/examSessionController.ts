@@ -33,6 +33,7 @@ export const getExamSessions = async (req: Request, res: Response): Promise<void
       startTimeFrom,
       startTimeTo,
       search,
+      type,
       sortBy = 'createdAt',
       sortOrder = 'desc'
     } = req.query;
@@ -68,6 +69,11 @@ export const getExamSessions = async (req: Request, res: Response): Promise<void
       if (startTimeTo) {
         query.startTime.$lte = new Date(startTimeTo as string);
       }
+    }
+
+    // 类型筛选
+    if (type) {
+      query.type = type;
     }
 
     // 搜索筛选

@@ -9,6 +9,7 @@ import examRoutes from './exam';
 import knowledgePointRoutes from './knowledgePoint';
 import examSessionRoutes from './examSessions';
 
+
 const router = Router();
 
 // 路由配置
@@ -21,6 +22,7 @@ router.use('/exam-paper', examPaperRoutes);
 router.use('/exam', examRoutes);
 router.use('/knowledge-points', knowledgePointRoutes);
 router.use('/exam-sessions', examSessionRoutes);
+
 
 // 健康检查路由
 router.get('/health', (req, res) => {

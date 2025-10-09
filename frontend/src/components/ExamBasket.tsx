@@ -6,38 +6,35 @@ import {
   Box,
   Typography,
   List,
-  ListItem,
-  ListItemText,
   IconButton,
-  TextField,
   Button,
   Divider,
   Alert,
   Card,
-  CardContent
+  CardContent,
+  Chip
 } from '@mui/material';
 import {
   ShoppingBasket as BasketIcon,
   Delete as DeleteIcon,
   Clear as ClearIcon,
-  Assignment as ExamIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  Quiz as ExamSystemIcon
 } from '@mui/icons-material';
 import { useExamBasket } from '../contexts/ExamBasketContext';
 import SafeHtmlRenderer from './SafeHtmlRenderer';
 
 const ExamBasket: React.FC = () => {
   const {
-    basketItems,
+    basketState,
     removeFromBasket,
-    updatePoints,
     clearBasket,
-    getTotalPoints,
     getItemCount
   } = useExamBasket();
   
+  const basketItems = basketState.examBasket;
+  
   const [isOpen, setIsOpen] = useState(false);
-  const [examTitle, setExamTitle] = useState('');
 
   const getTypeLabel = (type: string) => {
     const typeMap: { [key: string]: string } = {
@@ -59,47 +56,15 @@ const ExamBasket: React.FC = () => {
     return difficultyMap[difficulty] || difficulty;
   };
 
-  const handleGenerateExam = async () => {
+  const handleClearBasket = () => {
     if (basketItems.length === 0) {
-      alert('试题篮为空，请先添加题目');
+      alert('试题篮为空');
       return;
     }
     
-    if (!examTitle.trim()) {
-      alert('请输入试卷标题');
-      return;
-    }
-
-    try {
-      const response = await fetch('http://localhost:3001/api/exam-paper/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          title: examTitle,
-          questions: basketItems.map(item => ({
-            ...item.question,
-            points: item.points
-          }))
-        })
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        alert(`试卷"${examTitle}"生成成功！总分：${getTotalPoints()}分
-试卷ID：${result.data.id}`);
-        clearBasket();
-        setExamTitle('');
-        setIsOpen(false);
-      } else {
-        alert(`生成试卷失败：${result.message}`);
-      }
-    } catch (error) {
-      console.error('生成试卷失败:', error);
-      alert('生成试卷失败，请稍后重试');
+    if (confirm(`确定要清空试题篮吗？这将删除 ${basketItems.length} 道题目。`)) {
+      clearBasket();
+      alert('试题篮已清空');
     }
   };
 
@@ -148,18 +113,29 @@ const ExamBasket: React.FC = () => {
             pb: 2,
             borderBottom: '2px solid #e0e0e0'
           }}>
-            <Typography variant="h5" sx={{ 
-              fontWeight: 'bold',
-              background: 'linear-gradient(135deg, #4caf50, #66bb6a)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent'
-            }}>
-              试题篮 ({getItemCount()}题)
-            </Typography>
+            <Box>
+              <Typography variant="h5" sx={{ 
+                fontWeight: 'bold',
+                background: 'linear-gradient(135deg, #4caf50, #66bb6a)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                mb: 1
+              }}>
+                试题篮 ({getItemCount()}题)
+              </Typography>
+              <Chip
+                icon={<ExamSystemIcon />}
+
+                size="small"
+                variant="outlined"
+              />
+            </Box>
             <IconButton onClick={() => setIsOpen(false)}>
               <CloseIcon />
             </IconButton>
           </Box>
+          
+
           
           {basketItems.length === 0 ? (
             <Box sx={{ 
@@ -228,15 +204,6 @@ const ExamBasket: React.FC = () => {
                           </Box>
                           
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <TextField
-                              size="small"
-                              type="number"
-                              value={item.points}
-                              onChange={(e) => updatePoints(item.question._id || item.question.id, parseInt(e.target.value) || 1)}
-                              inputProps={{ min: 1, max: 100 }}
-                              sx={{ width: 70 }}
-                            />
-                            <Typography variant="caption">分</Typography>
                             <IconButton
                               size="small"
                               onClick={() => removeFromBasket(item.question._id || item.question.id)}
@@ -257,42 +224,36 @@ const ExamBasket: React.FC = () => {
                 <Divider sx={{ mb: 2 }} />
                 
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="h6" sx={{ 
+                  <Typography variant="body1" sx={{ 
                     fontWeight: 'bold',
                     color: '#4caf50'
                   }}>
-                    总分：{getTotalPoints()}分
+                    已选择 {basketItems.length} 道题目
                   </Typography>
                 </Box>
-                
-                <TextField
-                  fullWidth
-                  label="试卷标题"
-                  value={examTitle}
-                  onChange={(e) => setExamTitle(e.target.value)}
-                  sx={{ mb: 2 }}
-                  placeholder="请输入试卷标题"
-                />
                 
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <Button
                     variant="contained"
-                    startIcon={<ExamIcon />}
-                    onClick={handleGenerateExam}
+                    onClick={() => {
+                      alert(`已选择 ${basketItems.length} 道题目，完成题目选择`);
+                      setIsOpen(false);
+                    }}
                     fullWidth
-                    sx={{
+                    sx={{ 
                       background: 'linear-gradient(135deg, #4caf50, #66bb6a)',
                       '&:hover': {
                         background: 'linear-gradient(135deg, #388e3c, #4caf50)',
                       }
                     }}
                   >
-                    生成试卷
+                    完成选择 ({basketItems.length})
                   </Button>
                   <Button
                     variant="outlined"
                     startIcon={<ClearIcon />}
-                    onClick={clearBasket}
+                    onClick={handleClearBasket}
+                    fullWidth
                     sx={{ 
                       borderColor: '#f44336',
                       color: '#f44336',
@@ -302,7 +263,7 @@ const ExamBasket: React.FC = () => {
                       }
                     }}
                   >
-                    清空
+                    清空试题篮
                   </Button>
                 </Box>
               </Box>

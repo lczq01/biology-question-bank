@@ -85,14 +85,6 @@ const Dashboard: React.FC = () => {
                     onClick={() => handleNavigate('/exam-management')}
                     className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
                   >
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">试卷管理</h3>
-                    <p className="text-gray-600">查看和管理已生成的试卷</p>
-                  </div>
-                  
-                  <div 
-                    onClick={() => handleNavigate('/exam-management-new')}
-                    className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
-                  >
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">考试管理</h3>
                     <p className="text-gray-600">创建、编辑和管理在线考试</p>
                   </div>

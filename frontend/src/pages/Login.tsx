@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 const Login: React.FC = () => {
+  const navigate = useNavigate();
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [formData, setFormData] = useState({
     username: '',
@@ -69,19 +71,17 @@ const Login: React.FC = () => {
     try {
       if (isLoginMode) {
         const success = await login(formData.username, formData.password);
-        if (!success) {
+        if (success) {
+          // 登录成功，跳转到控制台
+          navigate('/dashboard');
+        } else {
           setError('用户名或密码错误');
         }
       } else {
-        const result = await register({
-          username: formData.username,
-          password: formData.password,
-          email: formData.email,
-          role: formData.role
-        });
+        const success = await register(formData.username, formData.email, formData.password);
         
-        if (result.success) {
-          setSuccess(result.message || '注册成功！请登录');
+        if (success) {
+          setSuccess('注册成功！请登录');
           setIsLoginMode(true);
           setFormData({
             username: formData.username,
@@ -91,7 +91,7 @@ const Login: React.FC = () => {
             role: 'student'
           });
         } else {
-          setError(result.message || '注册失败');
+          setError('注册失败');
         }
       }
     } catch (error) {

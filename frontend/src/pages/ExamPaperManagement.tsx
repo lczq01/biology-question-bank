@@ -4,551 +4,467 @@ import {
   Typography,
   Card,
   CardContent,
-  CardActions,
   Button,
-  Grid,
   Box,
+  Alert,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
+  TextField,
+  Stack,
+  Paper,
   Chip,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  List,
-  ListItem,
-  ListItemText,
-  Divider,
-  Alert,
-  IconButton,
-  Tooltip,
+  Tooltip
 } from '@mui/material';
 import {
-  Visibility as ViewIcon,
+  ArrowUpward as ArrowUpIcon,
+  ArrowDownward as ArrowDownIcon,
   Delete as DeleteIcon,
+  Edit as EditIcon,
+  Add as AddIcon,
+  Save as SaveIcon,
+  Cancel as CancelIcon,
+  NavigateBefore as BackIcon,
+  NavigateNext as NextIcon,
   Assignment as AssignmentIcon,
-  Schedule as TimeIcon,
-  Grade as GradeIcon,
-  QuestionAnswer as QuestionIcon,
-  AutoMode as AutoModeIcon
+  AutoAwesome as AutoModeIcon
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import SafeHtmlRenderer from '../components/SafeHtmlRenderer';
+import { useExamBasket } from '../contexts/ExamBasketContext';
 
-interface ExamPaper {
+interface ExamQuestion {
   id: string;
   title: string;
-  questions: any[];
-  totalPoints: number;
-  totalQuestions: number;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
   type: string;
+  difficulty: string;
+  points: number;
+  order: number;
 }
 
 const ExamPaperManagement: React.FC = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
-  const [examPapers, setExamPapers] = useState<ExamPaper[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedPaper, setSelectedPaper] = useState<ExamPaper | null>(null);
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const location = useLocation();
+  const { user } = useAuth();
+  const { basketState, clearBasket } = useExamBasket();
+  
+  const [questions, setQuestions] = useState<ExamQuestion[]>([]);
+  const [editingQuestion, setEditingQuestion] = useState<string | null>(null);
+  const [tempPoints, setTempPoints] = useState<number>(0);
+  const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean, questionId: string | null }>({ open: false, questionId: null });
 
-  // 处理退出登录
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
-  // 获取试卷列表
-  const fetchExamPapers = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('http://localhost:3001/api/exam-paper/list', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setExamPapers(result.data || []);
-        setError(null);
-      } else {
-        setError(result.message || '获取试卷列表失败');
-      }
-    } catch (error) {
-      console.error('获取试卷列表失败:', error);
-      setError('获取试卷列表失败，请稍后重试');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 删除试卷
-  const handleDeletePaper = async (paperId: string) => {
-    if (!confirm('确定要删除这份试卷吗？此操作不可恢复。')) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`http://localhost:3001/api/exam-paper/${paperId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        alert('试卷删除成功');
-        fetchExamPapers(); // 重新获取列表
-      } else {
-        alert(`删除失败：${result.message}`);
-      }
-    } catch (error) {
-      console.error('删除试卷失败:', error);
-      alert('删除试卷失败，请稍后重试');
-    }
-  };
-
-  // 查看试卷详情
-  const handleViewPaper = async (paperId: string) => {
-    try {
-      const response = await fetch(`http://localhost:3001/api/exam-paper/${paperId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setSelectedPaper(result.data);
-        setViewDialogOpen(true);
-      } else {
-        alert(`获取试卷详情失败：${result.message}`);
-      }
-    } catch (error) {
-      console.error('获取试卷详情失败:', error);
-      alert('获取试卷详情失败，请稍后重试');
-    }
-  };
-
-  const getTypeLabel = (type: string) => {
-    const typeMap: { [key: string]: string } = {
-      'single_choice': '单选题',
-      'multiple_choice': '多选题',
-      'fill_blank': '填空题'
-    };
-    return typeMap[type] || type;
-  };
-
-  const getDifficultyLabel = (difficulty: string) => {
-    const difficultyMap: { [key: string]: string } = {
-      'easy': '容易',
-      'medium': '中等',
-      'hard': '困难'
-    };
-    return difficultyMap[difficulty] || difficulty;
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('zh-CN');
-  };
-
+  // 从试题篮或URL参数初始化题目数据
   useEffect(() => {
-    fetchExamPapers();
-  }, []);
+    const initializeQuestions = () => {
+      // 优先从试题篮获取数据
+      if (basketState.examBasket && basketState.examBasket.length > 0) {
+        const basketQuestions: ExamQuestion[] = basketState.examBasket.map((item, index) => ({
+          id: item.question.id,
+          title: item.question.content || `题目 ${index + 1}`,
+          type: item.question.type || '选择题',
+          difficulty: item.question.difficulty || '中等',
+          points: item.points || 5,
+          order: index + 1
+        }));
+        setQuestions(basketQuestions);
+        setSuccess(`已从试题篮加载 ${basketQuestions.length} 道题目`);
+      } else {
+        // 如果没有试题篮数据，显示示例数据或空状态
+        setQuestions([]);
+        setError('暂无题目数据，请先选择题目');
+      }
+    };
 
-  if (loading) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          试卷管理
-        </Typography>
-        <Typography>加载中...</Typography>
-      </Container>
+    initializeQuestions();
+  }, [basketState.examBasket]);
+
+  // 处理题目排序
+  const moveQuestionUp = (index: number) => {
+    if (index <= 0) return;
+    
+    const newQuestions = [...questions];
+    [newQuestions[index], newQuestions[index - 1]] = [newQuestions[index - 1], newQuestions[index]];
+    
+    // 更新排序序号
+    newQuestions.forEach((q, i) => {
+      q.order = i + 1;
+    });
+    
+    setQuestions(newQuestions);
+    setSuccess('题目顺序已调整');
+  };
+
+  const moveQuestionDown = (index: number) => {
+    if (index >= questions.length - 1) return;
+    
+    const newQuestions = [...questions];
+    [newQuestions[index], newQuestions[index + 1]] = [newQuestions[index + 1], newQuestions[index]];
+    
+    // 更新排序序号
+    newQuestions.forEach((q, i) => {
+      q.order = i + 1;
+    });
+    
+    setQuestions(newQuestions);
+    setSuccess('题目顺序已调整');
+  };
+
+  // 开始编辑分值
+  const startEditingPoints = (questionId: string, currentPoints: number) => {
+    setEditingQuestion(questionId);
+    setTempPoints(currentPoints);
+  };
+
+  // 保存分值修改
+  const savePoints = (questionId: string) => {
+    const newQuestions = questions.map(q => 
+      q.id === questionId ? { ...q, points: tempPoints } : q
     );
-  }
+    setQuestions(newQuestions);
+    setEditingQuestion(null);
+    setSuccess('分值设置已保存');
+  };
+
+  // 取消编辑
+  const cancelEditing = () => {
+    setEditingQuestion(null);
+    setTempPoints(0);
+  };
+
+  // 删除题目
+  const deleteQuestion = (questionId: string) => {
+    const newQuestions = questions.filter(q => q.id !== questionId);
+    
+    // 更新排序序号
+    newQuestions.forEach((q, i) => {
+      q.order = i + 1;
+    });
+    
+    setQuestions(newQuestions);
+    setConfirmDialog({ open: false, questionId: null });
+    setSuccess('题目已删除');
+  };
+
+  // 计算总分
+  const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
+
+  // 保存试卷配置
+  const saveExamPaper = () => {
+    // 这里可以调用API保存试卷配置
+    setSuccess('试卷配置已保存');
+    
+    // 清空试题篮
+    clearBasket();
+  };
+
+  // 跳转到考试创建页面
+  const goToExamCreation = () => {
+    navigate('/exam-creation');
+  };
+
+  // 处理手动组卷
+  const handleManualGeneration = () => {
+    // 跳转到题目管理页面进行手动组卷
+    window.location.href = 'http://localhost:5173/questions?source=exam';
+  };
+
+  // 处理自动组卷
+  const handleAutoGeneration = () => {
+    // 跳转到自动组卷页面
+    navigate('/exam-paper-generation');
+  };
+
+  // 清除消息
+  useEffect(() => {
+    if (success || error) {
+      const timer = setTimeout(() => {
+        setSuccess(null);
+        setError(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, error]);
 
   return (
     <div style={{ minHeight: '100vh', background: 'white' }}>
       {/* 顶部导航栏 */}
-      <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-4 rounded-lg mb-6">
+      <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4 rounded-lg mb-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <button 
               onClick={() => navigate('/dashboard')}
-              className="mr-4 p-2 hover:bg-green-600 rounded-lg transition-colors"
+              className="mr-4 p-2 hover:bg-purple-600 rounded-lg transition-colors"
             >
               ←
             </button>
-            <h1 className="text-2xl font-bold">试卷管理</h1>
+            <h1 className="text-2xl font-bold">考试卷管理</h1>
+            <Typography variant="body2" sx={{ ml: 2, opacity: 0.8 }}>
+              管理考试题目配置和试卷设置
+            </Typography>
           </div>
           <div className="flex items-center space-x-4">
-            <span className="text-green-100">欢迎, {user?.username}</span>
+            <span className="text-purple-100">欢迎, {user?.username}</span>
             <button 
               onClick={() => navigate('/dashboard')}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
             >
               控制台
-            </button>
-            <button 
-              onClick={handleLogout}
-              className="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-lg transition-colors"
-            >
-              退出登录
             </button>
           </div>
         </div>
       </div>
 
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      {/* 主要内容区域 */}
+      <Container maxWidth="xl" sx={{ py: 3 }}>
+        {/* 消息提示 */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+        {success && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            {success}
+          </Alert>
+        )}
 
-      {/* 组卷功能按钮 */}
-      <Box sx={{ mb: 4, display: 'flex', gap: 2, justifyContent: 'center' }}>
-        <Button
-          variant="contained"
-          size="large"
-          startIcon={<AssignmentIcon />}
-          onClick={() => navigate('/questions')}
-          sx={{
-            background: 'linear-gradient(135deg, #4caf50, #66bb6a)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #388e3c, #4caf50)'
-            },
-            px: 4,
-            py: 1.5,
-            fontSize: '1.1rem',
-            fontWeight: 'bold'
-          }}
-        >
-          手动组卷
-        </Button>
-        
-        <Button
-          variant="contained"
-          size="large"
-          startIcon={<AutoModeIcon />}
-          onClick={() => navigate('/exam-paper-generation')}
-          sx={{
-            background: 'linear-gradient(135deg, #2196f3, #42a5f5)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #1976d2, #2196f3)'
-            },
-            px: 4,
-            py: 1.5,
-            fontSize: '1.1rem',
-            fontWeight: 'bold'
-          }}
-        >
-          自动组卷
-        </Button>
-      </Box>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      )}
-
-      {examPapers.length === 0 ? (
-        <Card sx={{ textAlign: 'center', py: 8 }}>
+        {/* 操作工具栏 */}
+        <Card sx={{ mb: 3 }}>
           <CardContent>
-            <AssignmentIcon sx={{ fontSize: 64, color: '#ccc', mb: 2 }} />
-            <Typography variant="h6" color="text.secondary" gutterBottom>
-              暂无试卷
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              您还没有创建任何试卷，请前往题目管理页面使用试题篮功能创建试卷
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Button
+                  variant="contained"
+                  startIcon={<AssignmentIcon />}
+                  onClick={handleManualGeneration}
+                  sx={{
+                    background: 'linear-gradient(135deg, #4caf50, #66bb6a)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #388e3c, #4caf50)'
+                    }
+                  }}
+                >
+                  手动组卷
+                </Button>
+                
+                <Button
+                  variant="contained"
+                  startIcon={<AutoModeIcon />}
+                  onClick={handleAutoGeneration}
+                  sx={{
+                    background: 'linear-gradient(135deg, #2196f3, #42a5f5)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #1976d2, #2196f3)'
+                    }
+                  }}
+                >
+                  自动组卷
+                </Button>
+                
+                <Button
+                  variant="contained"
+                  startIcon={<NextIcon />}
+                  onClick={goToExamCreation}
+                  sx={{
+                    background: 'linear-gradient(135deg, #ff9800, #ffb74d)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #f57c00, #ff9800)'
+                    }
+                  }}
+                >
+                  前往考试创建
+                </Button>
+              </Box>
+
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <Typography variant="h6" color="primary">
+                  总分: {totalPoints} 分
+                </Typography>
+                <Button
+                  variant="contained"
+                  startIcon={<SaveIcon />}
+                  onClick={saveExamPaper}
+                  disabled={questions.length === 0}
+                  sx={{
+                    background: 'linear-gradient(135deg, #4caf50, #66bb6a)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #388e3c, #4caf50)'
+                    }
+                  }}
+                >
+                  保存试卷配置
+                </Button>
+              </Box>
+            </Box>
           </CardContent>
         </Card>
-      ) : (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {examPapers.map((paper) => (
-            <Card key={paper.id} sx={{ 
-              boxShadow: 2,
-              '&:hover': {
-                boxShadow: 4,
-                transform: 'translateY(-1px)',
-                transition: 'all 0.3s ease'
-              },
-              borderRadius: 2
-            }}>
-              <CardContent sx={{ pb: 1 }}>
-                {/* 试卷标题和基本信息行 */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                  <Box sx={{ flex: 1, mr: 2 }}>
-                    <Typography variant="h6" sx={{ 
-                      fontWeight: 'bold',
-                      color: '#333',
-                      mb: 1,
-                      lineHeight: 1.4
-                    }}>
-                      {paper.title}
-                    </Typography>
-                    
-                    {/* 标签行 */}
-                    <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-                      <Chip
-                        icon={<QuestionIcon />}
-                        label={`${paper.totalQuestions}题`}
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                      />
-                      <Chip
-                        icon={<GradeIcon />}
-                        label={`${paper.totalPoints}分`}
-                        size="small"
-                        color="success"
-                        variant="outlined"
-                      />
-                      <Chip
-                        label={paper.type === 'manual' ? '手动组卷' : '自动组卷'}
-                        size="small"
-                        color={paper.type === 'manual' ? 'secondary' : 'info'}
-                        variant="outlined"
-                      />
-                    </Box>
-                    
-                    {/* 时间和创建者信息 */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, color: 'text.secondary' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <TimeIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                        <Typography variant="caption">
-                          {formatDate(paper.createdAt)}
-                        </Typography>
-                      </Box>
-                      <Typography variant="caption">
-                        创建者：{paper.createdBy}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  
-                  {/* 操作按钮 */}
-                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                    <Button
-                      startIcon={<ViewIcon />}
-                      onClick={() => handleViewPaper(paper.id)}
-                      variant="outlined"
-                      size="small"
-                      sx={{ 
-                        borderColor: '#4caf50',
-                        color: '#4caf50',
-                        '&:hover': {
-                          borderColor: '#388e3c',
-                          background: '#e8f5e8'
-                        },
-                        minWidth: '100px'
-                      }}
-                    >
-                      查看详情
-                    </Button>
-                    
-                    <Tooltip title="删除试卷">
-                      <IconButton
-                        onClick={() => handleDeletePaper(paper.id)}
-                        size="small"
-                        sx={{ 
-                          color: '#f44336',
-                          '&:hover': {
-                            background: '#ffebee'
-                          }
-                        }}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          ))}
-        </Box>
-      )}
 
-      {/* 试卷详情对话框 */}
-      <Dialog
-        open={viewDialogOpen}
-        onClose={() => setViewDialogOpen(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle sx={{ 
-          background: 'linear-gradient(135deg, #4caf50, #66bb6a)',
-          color: 'white',
-          fontWeight: 'bold'
-        }}>
-          试卷详情
-        </DialogTitle>
-        
-        <DialogContent sx={{ mt: 2 }}>
-          {selectedPaper && (
-            <Box>
-              <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-                {selectedPaper.title}
-              </Typography>
-              
-              <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-                <Chip
-                  icon={<QuestionIcon />}
-                  label={`总题数：${selectedPaper.totalQuestions}`}
-                  color="primary"
-                />
-                <Chip
-                  icon={<GradeIcon />}
-                  label={`总分：${selectedPaper.totalPoints}分`}
-                  color="success"
-                />
-                <Chip
-                  label={selectedPaper.type === 'manual' ? '手动组卷' : '自动组卷'}
-                  color={selectedPaper.type === 'manual' ? 'secondary' : 'info'}
-                />
+        {/* 题目管理表格 */}
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              考试题目管理 ({questions.length} 道题目)
+            </Typography>
+
+            {questions.length === 0 ? (
+              <Box textAlign="center" py={4}>
+                <Typography variant="body1" color="text.secondary" gutterBottom>
+                  暂无题目数据
+                </Typography>
+                <Typography variant="body1" color="text.secondary" gutterBottom>
+                  暂无题目数据
+                </Typography>
               </Box>
-              
-              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', mt: 3 }}>
-                题目列表：
-              </Typography>
-              
-              <List sx={{ maxHeight: 500, overflow: 'auto' }}>
-                {selectedPaper.questions.map((question, index) => (
-                  <React.Fragment key={question._id !== 'missing' ? question._id : `question-${index}`}>
-                    <ListItem sx={{ alignItems: 'flex-start', py: 2 }}>
-                      <ListItemText
-                        primary={
-                          <Box>
-                            {/* 题目标题和内容 */}
-                            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2, color: '#333' }}>
-                              第{index + 1}题 ({getTypeLabel(question.type)}) - {question.points || 0}分
-                            </Typography>
-                            
-                            {/* 题目内容 */}
-                            <Box sx={{ mb: 2, p: 2, bgcolor: '#fafafa', borderRadius: 1, border: '1px solid #e0e0e0' }}>
-                              <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1, color: '#555' }}>
-                                题目：
+            ) : (
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell width="60px">序号</TableCell>
+                      <TableCell>题目信息</TableCell>
+                      <TableCell width="120px">题型</TableCell>
+                      <TableCell width="100px">难度</TableCell>
+                      <TableCell width="150px">分值设置</TableCell>
+                      <TableCell width="120px">排序操作</TableCell>
+                      <TableCell width="80px">删除</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {questions.map((question, index) => (
+                      <TableRow key={question.id} hover>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight="bold">
+                            {question.order}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2">
+                            {question.title}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={question.type} 
+                            size="small" 
+                            color="primary" 
+                            variant="outlined"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={question.difficulty} 
+                            size="small" 
+                            color={
+                              question.difficulty === '简单' ? 'success' :
+                              question.difficulty === '中等' ? 'warning' : 'error'
+                            }
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {editingQuestion === question.id ? (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <TextField
+                                size="small"
+                                type="number"
+                                value={tempPoints}
+                                onChange={(e) => setTempPoints(Number(e.target.value))}
+                                inputProps={{ min: 1, max: 100 }}
+                                sx={{ width: 80 }}
+                              />
+                              <IconButton size="small" onClick={() => savePoints(question.id)}>
+                                <SaveIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton size="small" onClick={cancelEditing}>
+                                <CancelIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          ) : (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="body2">
+                                {question.points} 分
                               </Typography>
-                              <SafeHtmlRenderer 
-                                html={question.content || '题目内容'} 
-                              />
+                              <Tooltip title="编辑分值">
+                                <IconButton 
+                                  size="small" 
+                                  onClick={() => startEditingPoints(question.id, question.points)}
+                                >
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
                             </Box>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Stack direction="row" spacing={0.5}>
+                            <Tooltip title="上移">
+                              <IconButton 
+                                size="small" 
+                                disabled={index === 0}
+                                onClick={() => moveQuestionUp(index)}
+                              >
+                                <ArrowUpIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="下移">
+                              <IconButton 
+                                size="small" 
+                                disabled={index === questions.length - 1}
+                                onClick={() => moveQuestionDown(index)}
+                              >
+                                <ArrowDownIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Stack>
+                        </TableCell>
+                        <TableCell>
+                          <Tooltip title="删除题目">
+                            <IconButton 
+                              size="small" 
+                              color="error"
+                              onClick={() => setConfirmDialog({ open: true, questionId: question.id })}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </CardContent>
+        </Card>
+      </Container>
 
-                            {/* 选择题选项 */}
-                            {(question.type === 'single_choice' || question.type === 'multiple_choice') && question.options && (
-                              <Box sx={{ mb: 2, p: 2, bgcolor: '#f0f8ff', borderRadius: 1, border: '1px solid #b3d9ff' }}>
-                                <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1, color: '#555' }}>
-                                  选项：
-                                </Typography>
-                                {question.options.map((option: any, optionIndex: number) => (
-                                  <Box key={optionIndex} sx={{ mb: 1, display: 'flex', alignItems: 'flex-start' }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1, minWidth: '20px', color: '#666' }}>
-                                      {String.fromCharCode(65 + optionIndex)}.
-                                    </Typography>
-                                    <Box sx={{ flex: 1 }}>
-                                      <SafeHtmlRenderer html={option.text || option} />
-                                    </Box>
-                                  </Box>
-                                ))}
-                              </Box>
-                            )}
-
-                            {/* 正确答案 */}
-                            {question.correctAnswer && (
-                              <Box sx={{ mb: 2, p: 2, bgcolor: '#f0fff0', borderRadius: 1, border: '1px solid #90ee90' }}>
-                                <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1, color: '#555' }}>
-                                  正确答案：
-                                </Typography>
-                                <Typography variant="body2" sx={{ color: '#2e7d32', fontWeight: 'bold' }}>
-                                  {question.type === 'fill_blank' ? (
-                                    Array.isArray(question.correctAnswer) 
-                                      ? question.correctAnswer.join('、') 
-                                      : question.correctAnswer
-                                  ) : (
-                                    question.type === 'single_choice' ? (
-                                      `${question.correctAnswer} (${question.options?.[question.correctAnswer.charCodeAt(0) - 65]?.text || question.options?.[question.correctAnswer.charCodeAt(0) - 65] || ''})`
-                                    ) : question.type === 'multiple_choice' ? (
-                                      Array.isArray(question.correctAnswer) 
-                                        ? question.correctAnswer.map((ans: string) => 
-                                            `${ans} (${question.options?.[ans.charCodeAt(0) - 65]?.text || question.options?.[ans.charCodeAt(0) - 65] || ''})`
-                                          ).join('、')
-                                        : question.correctAnswer
-                                    ) : question.correctAnswer
-                                  )}
-                                </Typography>
-                              </Box>
-                            )}
-
-                            {/* 解析 */}
-                            {question.explanation && (
-                              <Box sx={{ mb: 2, p: 2, bgcolor: '#fff8e1', borderRadius: 1, border: '1px solid #ffcc02' }}>
-                                <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1, color: '#555' }}>
-                                  解析：
-                                </Typography>
-                                <SafeHtmlRenderer 
-                                  html={question.explanation} 
-                                />
-                              </Box>
-                            )}
-
-                            {/* 题目属性标签 */}
-                            <Box sx={{ display: 'flex', gap: 1, mt: 2, flexWrap: 'wrap' }}>
-                              <Chip
-                                label={getTypeLabel(question.type)}
-                                size="small"
-                                color="primary"
-                                variant="outlined"
-                              />
-                              <Chip
-                                label={getDifficultyLabel(question.difficulty)}
-                                size="small"
-                                color="warning"
-                                variant="outlined"
-                              />
-                              <Chip
-                                label={question.chapter || '未分类'}
-                                size="small"
-                                color="info"
-                                variant="outlined"
-                              />
-                              <Chip
-                                label={`${question.points || 0}分`}
-                                size="small"
-                                color="success"
-                                variant="outlined"
-                              />
-                              {question.knowledgePoint && (
-                                <Chip
-                                  label={question.knowledgePoint}
-                                  size="small"
-                                  color="secondary"
-                                  variant="outlined"
-                                />
-                              )}
-                            </Box>
-                          </Box>
-                        }
-                      />
-                    </ListItem>
-                    {index < selectedPaper.questions.length - 1 && <Divider sx={{ my: 1 }} />}
-                  </React.Fragment>
-                ))}
-              </List>
-            </Box>
-          )}
+      {/* 删除确认对话框 */}
+      <Dialog open={confirmDialog.open} onClose={() => setConfirmDialog({ open: false, questionId: null })}>
+        <DialogTitle>确认删除</DialogTitle>
+        <DialogContent>
+          <Typography>确定要删除这道题目吗？此操作不可恢复。</Typography>
         </DialogContent>
-        
         <DialogActions>
-          <Button onClick={() => setViewDialogOpen(false)} color="primary">
-            关闭
+          <Button onClick={() => setConfirmDialog({ open: false, questionId: null })}>
+            取消
+          </Button>
+          <Button 
+            onClick={() => confirmDialog.questionId && deleteQuestion(confirmDialog.questionId)} 
+            color="error"
+          >
+            确认删除
           </Button>
         </DialogActions>
       </Dialog>
-      </Container>
     </div>
   );
 };

@@ -8,6 +8,8 @@ import QuestionForm from '../pages/QuestionForm';
 import QuestionFilter from '../pages/QuestionFilter';
 import ExamPaperGeneration from '../pages/ExamPaperGeneration';
 import ExamPaperManagement from '../pages/ExamPaperManagement';
+
+
 import DocumentImport from '../pages/DocumentImport';
 import ExamCreation from '../pages/ExamCreation';
 import ExamManagement from '../pages/ExamManagement';
@@ -114,13 +116,14 @@ const AppRoutes: React.FC = () => {
         } 
       />
       <Route 
-        path="/exam-management" 
+        path="/exam-paper-management" 
         element={
           <ProtectedRoute>
             <ExamPaperManagement />
           </ProtectedRoute>
         } 
       />
+
       <Route 
         path="/exam-creation" 
         element={
@@ -130,7 +133,7 @@ const AppRoutes: React.FC = () => {
         } 
       />
       <Route 
-        path="/exam-management-new" 
+        path="/exam-management" 
         element={
           <ProtectedRoute>
             <ExamManagement />

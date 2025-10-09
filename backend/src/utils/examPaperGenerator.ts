@@ -126,18 +126,6 @@ export class ExamPaperGenerator {
 
   // 验证配置
   private validateConfig(config: ExamPaperConfig): void {
-    // 检查难度分布总和是否为1
-    const difficultySum = Object.values(config.difficultyDistribution).reduce((sum, val) => sum + val, 0);
-    if (Math.abs(difficultySum - 1) > 0.01) {
-      throw new ExamPaperGenerationError('难度分布比例总和必须等于1', 'INVALID_DIFFICULTY_DISTRIBUTION');
-    }
-
-    // 检查题型分布总和是否为1
-    const typeSum = Object.values(config.typeDistribution).reduce((sum, val) => sum + val, 0);
-    if (Math.abs(typeSum - 1) > 0.01) {
-      throw new ExamPaperGenerationError('题型分布比例总和必须等于1', 'INVALID_TYPE_DISTRIBUTION');
-    }
-
     // 检查基本参数
     if (config.totalQuestions <= 0) {
       throw new ExamPaperGenerationError('总题目数量必须大于0', 'INVALID_TOTAL_QUESTIONS');

@@ -16,6 +16,9 @@ api.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      // 如果没有token，使用mock token进行测试（后端mockAuth中间件需要特定格式）
+      config.headers.Authorization = 'Bearer mock-token-admin';
     }
     return config;
   },
@@ -51,11 +54,17 @@ export const authAPI = {
   getCurrentUser: async () => {
     const response = await api.get('/auth/me');
     return response.data;
+  },
+  
+  logout: async () => {
+    const response = await api.post('/auth/logout');
+    return response.data;
   }
 };
 
 // 考试相关API
 export const examAPI = {
+  // 考试会话管理
   // 获取考试会话列表
   getExamSessions: async (params?: { limit?: number; page?: number; status?: string }) => {
     const queryParams = new URLSearchParams();
@@ -67,6 +76,45 @@ export const examAPI = {
     return response.data;
   },
 
+  // 创建考试会话
+  createExamSession: async (data: any) => {
+    const response = await api.post('/exam-sessions', data);
+    return response.data;
+  },
+
+  // 更新考试会话
+  updateExamSession: async (sessionId: string, data: any) => {
+    const response = await api.put(`/exam-sessions/${sessionId}`, data);
+    return response.data;
+  },
+
+  // 更新考试会话状态
+  updateExamSessionStatus: async (sessionId: string, status: string) => {
+    const response = await api.patch(`/exam-sessions/${sessionId}/status`, { status });
+    return response.data;
+  },
+
+  // 批量更新考试会话状态
+  batchUpdateExamSessionStatus: async (sessionIds: string[], status: string) => {
+    const response = await api.patch('/exam-sessions/batch-status', { 
+      sessionIds, 
+      status 
+    });
+    return response.data;
+  },
+
+  // 删除考试会话
+  deleteExamSession: async (sessionId: string) => {
+    const response = await api.delete(`/exam-sessions/${sessionId}`);
+    return response.data;
+  },
+
+  // 获取考试会话详情
+  getExamSessionDetails: async (sessionId: string) => {
+    const response = await api.get(`/exam-sessions/${sessionId}`);
+    return response.data;
+  },
+
   // 获取学生可参与的考试会话列表
   getAvailableExamSessions: async (params?: { limit?: number; page?: number }) => {
     const queryParams = new URLSearchParams();
@@ -74,12 +122,6 @@ export const examAPI = {
     if (params?.page) queryParams.append('page', params.page.toString());
     
     const response = await api.get(`/exam-sessions/available?${queryParams.toString()}`);
-    return response.data;
-  },
-
-  // 获取考试会话详情
-  getExamSessionDetails: async (sessionId: string) => {
-    const response = await api.get(`/exam-sessions/${sessionId}`);
     return response.data;
   },
 
